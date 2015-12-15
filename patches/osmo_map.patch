@@ -1,0 +1,64 @@
+diff --git a/ebin/osmo_map.app b/ebin/osmo_map.app
+index 6502f41..6919668 100644
+--- a/ebin/osmo_map.app
++++ b/ebin/osmo_map.app
+@@ -4,7 +4,8 @@
+ 	 {modules, [map, map_codec, map_helper,
+ 		    tcap_asn, tcap_helper,
+ 		    map_only,
+-		    map_app_sup, map_ss_server, map_dlg_server]},
++		    map_app_sup, map_ss_server, map_dlg_server
++            ]},
+ 	 {registered, []},
+ 	 {applications, []},
+ 	 {env, [
+diff --git a/rebar.config b/rebar.config
+index c4805bc..c80d3e2 100644
+--- a/rebar.config
++++ b/rebar.config
+@@ -1,3 +1,6 @@
+ {sub_dirs, ["rel"]}.
++{deps, [
++        {osmo_ss7, "1", {git, "git://git.osmocom.org/erlang/osmo_ss7/", "master"}}
++    ]}.
+ {asn1_opts, [ber,verbose]}.
+ {eunit_opts, [verbose, {report,{eunit_surefire,[{dir,"."}]}}]}.
+diff --git a/src/map_dlg_server.erl b/src/map_dlg_server.erl
+index 08b0fe4..c40ad57 100644
+--- a/src/map_dlg_server.erl
++++ b/src/map_dlg_server.erl
+@@ -3,7 +3,7 @@
+ 
+ -behaviour(gen_server).
+ 
+--include_lib("TCAP/include/tcap.hrl").
++-include_lib("tcap.hrl").
+ 
+ -export([init/1, handle_cast/2, code_change/3, handle_call/3, handle_info/2, terminate/2]).
+ 
+diff --git a/src/map_helper.erl b/src/map_helper.erl
+index ea1e291..31da750 100644
+--- a/src/map_helper.erl
++++ b/src/map_helper.erl
+@@ -35,7 +35,7 @@
+ -author('Harald Welte <laforge@gnumonks.org>').
+ 
+ -include_lib("osmo_ss7/include/isup.hrl").
+--include_lib("osmo_map/include/map.hrl").
++-include("map.hrl").
+ -include_lib("osmo_map/include/map_operations.hrl").
+ 
+ -export([postproc/2, postproc_gt/2, postproc_imsi/2, postproc_msisdn/2,
+diff --git a/src/map_ss_server.erl b/src/map_ss_server.erl
+index 005cd8b..7b022a2 100644
+--- a/src/map_ss_server.erl
++++ b/src/map_ss_server.erl
+@@ -1,7 +1,7 @@
+ -module(map_ss_server).
+ -author('Harald Welte <laforge@gnumonks.org>').
+ 
+--include_lib("TCAP/include/tcap.hrl").
++-include_lib("tcap.hrl").
+ 
+ -behaviour(gen_server).
+ 

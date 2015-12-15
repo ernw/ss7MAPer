@@ -1,0 +1,437 @@
+diff --git a/include/osmo_ss7.hrl b/include/osmo_ss7.hrl
+index 80dcb3e..8ccdf42 100644
+--- a/include/osmo_ss7.hrl
++++ b/include/osmo_ss7.hrl
+@@ -14,7 +14,10 @@
+ 	sls		:: non_neg_integer(),
+ 	local		:: record(sigtran_peer),
+ 	remote		:: record(sigtran_peer),
+-	role		:: role()
++	role		:: role(),
++    asp_id      :: integer(),
++    route_ctx   :: integer(),
++    net_app     :: integer()
+ }).
+ 
+ 
+diff --git a/include/sccp.hrl b/include/sccp.hrl
+index 46b4c11..58036cc 100644
+--- a/include/sccp.hrl
++++ b/include/sccp.hrl
+@@ -66,6 +66,8 @@
+ -define(SCCP_SSN_RES_NAT,	2#000001100).
+ -define(SCCP_SSN_BISDN,		2#000001101).
+ -define(SCCP_SSN_TC_TEST,	2#000001110).
++-define(SCCP_SSN_SGSN,      2#010010101).
++-define(SCCP_SSN_CAP,       2#010010010).
+ 
+ % According to Q.731 Section 3.4.2.3.1
+ -define(SCCP_NAI_SUBSCRIBER,	2#00000001).
+diff --git a/src/m3ua_codec.erl b/src/m3ua_codec.erl
+index 5b29b7e..e5976e8 100644
+--- a/src/m3ua_codec.erl
++++ b/src/m3ua_codec.erl
+@@ -86,11 +86,17 @@ parse_m3ua_opt(Opt, Msg) ->
+ 
+ 
+ encode_m3ua_msg(#m3ua_msg{version = Version, msg_class = MsgClass,
++			  msg_type = ?M3UA_MSGT_ASPSM_ASPUP, payload = OptList}) ->
++	OptBin = encode_m3ua_opts(OptList),
++    MsgLen = byte_size(OptBin) + 8,
++	<<Version:8, 0:8, MsgClass:8, ?M3UA_MSGT_ASPSM_ASPUP:8, MsgLen:32/big, OptBin/binary>>;
++encode_m3ua_msg(#m3ua_msg{version = Version, msg_class = MsgClass,
+ 			  msg_type = MsgType, payload = OptList}) ->
+ 	OptBin = encode_m3ua_opts(OptList),
+-	MsgLen = byte_size(OptBin) + 8,
++    MsgLen = byte_size(OptBin) + 8,
+ 	<<Version:8, 0:8, MsgClass:8, MsgType:8, MsgLen:32/big, OptBin/binary>>.
+ 
++
+ encode_m3ua_opts(OptList) when is_list(OptList) ->
+ 	encode_m3ua_opts(OptList, <<>>).
+ 
+@@ -114,6 +120,8 @@ encode_m3ua_opt(?M3UA_IEI_PROTOCOL_DATA, Mtp3) when is_record(Mtp3, mtp3_msg) ->
+ 	end,
+ 	PayBin = <<Opc:32/big, Dpc:32/big, Si:8, Ni:8, MpD:8, Sls:8, Payload/binary>>,
+ 	encode_m3ua_opt(?M3UA_IEI_PROTOCOL_DATA, PayBin);
++encode_m3ua_opt(Iei, Data) when is_integer(Iei), is_binary(Data), Data == <<>> ->
++	<<>>;
+ encode_m3ua_opt(Iei, Data) when is_integer(Iei), is_binary(Data) ->
+ 	Length = byte_size(Data) + 4,
+ 	PadLen = get_num_pad_bytes(Length),
+diff --git a/src/m3ua_core.erl b/src/m3ua_core.erl
+index 2adc424..4198cb7 100644
+--- a/src/m3ua_core.erl
++++ b/src/m3ua_core.erl
+@@ -40,7 +40,7 @@
+ -include("sccp.hrl").
+ -include("m3ua.hrl").
+ 
+--export([start_link/1]).
++-export([start_link/1, stop/0]).
+ 
+ -export([init/1, terminate/3, code_change/4, handle_event/3, handle_info/3]).
+ 
+@@ -59,11 +59,18 @@
+ 	  sctp_remote_ip,
+ 	  sctp_remote_port,
+ 	  sctp_sock,
+-	  sctp_assoc_id
++	  sctp_assoc_id,
++      asp_id,
++      net_app,
++      route_ctx
+ 	}).
+ 
+ start_link(InitOpts) ->
+-	gen_fsm:start_link(?MODULE, InitOpts, [{debug, [trace]}]).
++	%~ gen_fsm:start_link(?MODULE, InitOpts, [{debug, [trace]}]).
++	gen_fsm:start_link(?MODULE, InitOpts, []).
++
++stop() ->
++    gen_fsm:send_all_state_event(?MODULE, stop).
+ 
+ reconnect_sctp(L = #m3ua_state{sctp_remote_ip = Ip, sctp_remote_port = Port, sctp_sock = Sock}) ->
+ 	timer:sleep(1*1000),
+@@ -91,13 +98,24 @@ build_openopts(PropList) ->
+ 	[{active, once}, {reuseaddr, true}] ++
+ 	lists:flatten(lists:map(fun build_openopt/1, PropList)).
+ 
++build_extarg(Arg, _) when Arg == none ->
++    <<>>;
++build_extarg(Arg, Len) ->
++    <<Arg:Len>>.
++
+ init(InitOpts) ->
+ 	{ok, SctpSock} = gen_sctp:open(build_openopts(InitOpts)),
++    Asp_id = proplists:get_value(asp_id, InitOpts),
++    Route_ctx = proplists:get_value(route_ctx, InitOpts),
++    Net_app = proplists:get_value(net_app, InitOpts),
+ 	LoopDat = #m3ua_state{role = asp, sctp_sock = SctpSock,
+ 				user_fun = proplists:get_value(user_fun, InitOpts),
+ 				user_args = proplists:get_value(user_args, InitOpts),
+ 				sctp_remote_ip = proplists:get_value(sctp_remote_ip, InitOpts),
+-				sctp_remote_port = proplists:get_value(sctp_remote_port, InitOpts)},
++				sctp_remote_port = proplists:get_value(sctp_remote_port, InitOpts),
++                asp_id = build_extarg(Asp_id,32),
++                route_ctx = build_extarg(Route_ctx,32),
++                net_app = build_extarg(Net_app,32)},
+ 	LoopDat2 = reconnect_sctp(LoopDat),
+ 	{ok, asp_down, LoopDat2}.
+ 
+@@ -145,6 +163,8 @@ send_msg_start_tack(LoopDat, State, MsgClass, MsgType, Params) ->
+ 
+ 
+ 
++handle_event(stop, State, LoopDat) ->
++    {stop, normal, LoopDat};
+ handle_event(Event, State, LoopDat) ->
+ 	io:format("Unknown Event ~p in state ~p~n", [Event, State]),
+ 	{next_state, State, LoopDat}.
+@@ -191,13 +211,16 @@ handle_info({sctp, Socket, _RemoteIp, _RemotePort, {ANC, SPC}},
+ 			{State, LoopDat};
+ 		addr_made_prim ->
+ 			% FIXME: do we need to change remote_ip in our LoopDat?
++			{State, LoopDat};
++        addr_confirmed ->
++            % FIXME: do we need to change remote_ip in our LoopDat?
+ 			{State, LoopDat}
+ 	end,
+ 	inet:setopts(Socket, [{active, once}]),
+ 	{next_state, NewState, LoopDat2};
+ 
+ handle_info({sctp, Socket, RemoteIp, RemotePort, {[Anc], Data}}, State, LoopDat) ->
+-	io:format("SCTP rx data: ~p ~p~n", [Anc, Data]),
++	%~ io:format("SCTP rx data: ~p ~p~n", [Anc, Data]),
+ 	% process incoming SCTP data 
+ 	if Socket == LoopDat#m3ua_state.sctp_sock,
+ 	   RemoteIp == LoopDat#m3ua_state.sctp_remote_ip,
+@@ -218,13 +241,19 @@ handle_info({sctp, Socket, RemoteIp, RemotePort, {_Anc, Data}}, _State, LoopDat)
+ 	{next_state, asp_down, LoopDat}.
+ 
+ 
+-
+ asp_down(#primitive{subsystem = 'M', gen_name = 'ASP_UP',
+ 		    spec_name = request, parameters = _Params}, LoopDat) ->
+ 	% M-ASP_UP.req from user, generate message and send to remote peer
+-	send_msg_start_tack(LoopDat, asp_down, ?M3UA_MSGC_ASPSM, ?M3UA_MSGT_ASPSM_ASPUP, []);
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
++    % added asp identifier
++    % added network appearance
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
++	send_msg_start_tack(LoopDat, asp_down, ?M3UA_MSGC_ASPSM, ?M3UA_MSGT_ASPSM_ASPUP, 
++                [{?M3UA_IEI_ASP_ID, LoopDat#m3ua_state.asp_id}]);
+ asp_down({timer_expired, t_ack, {?M3UA_MSGC_ASPSM, ?M3UA_MSGT_ASPSM_ASPUP, Params}}, LoopDat) ->
+-	send_msg_start_tack(LoopDat, asp_down, ?M3UA_MSGC_ASPSM, ?M3UA_MSGT_ASPSM_ASPUP, Params);
++	send_msg_start_tack(LoopDat, asp_down, ?M3UA_MSGC_ASPSM, ?M3UA_MSGT_ASPSM_ASPUP, 
++                lists:append([{?M3UA_IEI_NET_APPEARANCE, LoopDat#m3ua_state.net_app}, 
++                    {?M3UA_IEI_ASP_ID, LoopDat#m3ua_state.asp_id}], Params));
+ 
+ asp_down(#m3ua_msg{msg_class = ?M3UA_MSGC_ASPSM,
+ 		   msg_type = ?M3UA_MSGT_ASPSM_ASPUP_ACK}, LoopDat) ->
+@@ -240,8 +269,14 @@ asp_down(M3uaMsg, LoopDat) when is_record(M3uaMsg, m3ua_msg) ->
+ asp_inactive(#primitive{subsystem = 'M', gen_name = 'ASP_ACTIVE',
+ 			spec_name = request, parameters = _Params}, LoopDat) ->
+ 	% M-ASP_ACTIVE.req from user, generate message and send to remote peer
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
++    % added routing context
++    % added network appearance
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 	send_msg_start_tack(LoopDat, asp_inactive, ?M3UA_MSGC_ASPTM, ?M3UA_MSGT_ASPTM_ASPAC,
+-			   [{?M3UA_IEI_TRAF_MODE_TYPE, <<0,0,0,1>>}]);
++			   [{?M3UA_IEI_NET_APPEARANCE, LoopDat#m3ua_state.net_app}, 
++                {?M3UA_IEI_TRAF_MODE_TYPE, <<0,0,0,2>>},
++                {?M3UA_IEI_ROUTE_CTX, LoopDat#m3ua_state.route_ctx}]);
+ 
+ asp_inactive({timer_expired, t_ack, {?M3UA_MSGC_ASPTM, ?M3UA_MSGT_ASPTM_ASPAC, Params}}, LoopDat) ->
+ 	send_msg_start_tack(LoopDat, asp_inactive, ?M3UA_MSGC_ASPTM, ?M3UA_MSGT_ASPTM_ASPAC, Params);
+@@ -310,7 +345,10 @@ asp_active({timer_expired, t_ack, {?M3UA_MSGC_ASPTM, ?M3UA_MSGT_ASPTM_ASPIA, Par
+ asp_active(#primitive{subsystem = 'MTP', gen_name = 'TRANSFER',
+ 		      spec_name = request, parameters = Params}, LoopDat) ->
+ 	% MTP-TRANSFER.req from user app: Send message to remote peer
+-	OptList = [{?M3UA_IEI_PROTOCOL_DATA, Params}],
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
++    % added routing context
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%
++	OptList = [{?M3UA_IEI_ROUTE_CTX, LoopDat#m3ua_state.route_ctx}, {?M3UA_IEI_PROTOCOL_DATA, Params}],
+ 	Msg = #m3ua_msg{version = 1, msg_class = ?M3UA_MSGC_TRANSFER,
+ 			msg_type = ?M3UA_MSGT_XFR_DATA,
+ 			payload = OptList},
+diff --git a/src/sccp_codec.erl b/src/sccp_codec.erl
+index 2374d73..9119269 100644
+--- a/src/sccp_codec.erl
++++ b/src/sccp_codec.erl
+@@ -326,7 +326,11 @@ encode_sccp_addr(#sccp_addr{res_nat_use = ResNatUse,
+ 	{PCind, PCbin} = encode_pc(PointCode),
+ 	ResNatOut = undef_or_true(ResNatUse),
+ 	RoutIndOut = undef_or_true(RoutInd),
+-	<<ResNatOut:1, RoutIndOut:1, GTind:4, SSNind:1, PCind:1, PCbin/binary, SSNbin/binary, GTbin/binary>>.
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
++    % removed pointcode
++    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
++	%<<ResNatOut:1, RoutIndOut:1, GTind:4, SSNind:1, PCind:1, PCbin/binary, SSNbin/binary, GTbin/binary>>.
++    <<ResNatOut:1, RoutIndOut:1, GTind:4, SSNind:1, 0:1, SSNbin/binary, GTbin/binary>>.
+ 
+ 
+ encode_sccp_opt({AddrTag, AddrVal}) when AddrTag == ?SCCP_PNC_CALLED_PARTY_ADDRESS;
+diff --git a/src/sctp_core.erl b/src/sctp_core.erl
+index 1e9fc21..730046e 100644
+--- a/src/sctp_core.erl
++++ b/src/sctp_core.erl
+@@ -222,7 +222,7 @@ handle_info({sctp, Socket, _RemoteIp, _RemotePort, {ANC, SAC}},
+ 
+ handle_info({sctp, Socket, RemoteIp, RemotePort, {[Anc], Data}}, State, LoopDat) ->
+ 	Module = LoopDat#sctp_state.module,
+-	io:format("SCTP rx data: ~p ~p~n", [Anc, Data]),
++	%~ io:format("SCTP rx data: ~p ~p~n", [Anc, Data]),
+ 	% process incoming SCTP data
+ 	if Socket == LoopDat#sctp_state.sctp_sock,
+ 	   RemoteIp == LoopDat#sctp_state.sctp_remote_ip,
+diff --git a/src/ss7_link_m3ua.erl b/src/ss7_link_m3ua.erl
+index 15ba837..4d7551d 100644
+--- a/src/ss7_link_m3ua.erl
++++ b/src/ss7_link_m3ua.erl
+@@ -41,8 +41,9 @@
+ -include_lib("osmo_ss7/include/osmo_ss7.hrl").
+ 
+ -export([start_link/1, init/1]).
+-
+--export([handle_cast/2]).
++-export([stop/0]).
++-export([handle_cast/2, terminate/2]).
++-export([get_link_state/1]).
+ 
+ -record(loop_dat, {
+ 	 m3ua_pid,
+@@ -50,16 +51,20 @@
+ 	}).
+ 
+ start_link(Args) ->
+-	gen_server:start_link(?MODULE, Args, [{debug, [trace]}]).
++	%~ gen_server:start_link(?MODULE, Args, [{debug, [trace]}]).
++	gen_server:start_link(?MODULE, Args, []).
+ 
+ init(L = #sigtran_link{type = m3ua, name = Name, linkset_name = LinksetName,
+-		       sls = Sls, local = Local, remote = Remote}) ->
++		       sls = Sls, local = Local, remote = Remote, asp_id = Asp_id,
++               route_ctx = Route_ctx, net_app = Net_app}) ->
+ 	#sigtran_peer{ip = LocalIp, port = LocalPort} = Local,
+ 	#sigtran_peer{ip = RemoteIp, port = RemotePort} = Remote,
+ 	% start the M3UA link to the SG
+ 	Opts = [{user_pid, self()},
+ 		{sctp_remote_ip, RemoteIp}, {sctp_remote_port, RemotePort},
+ 		{sctp_local_ip, LocalIp}, {sctp_local_port, LocalPort},
++        {asp_id, Asp_id}, {route_ctx, Route_ctx},
++        {net_app, Net_app},
+ 		{user_fun, fun m3ua_tx_to_user/2}, {user_args, self()}],
+ 	{ok, M3uaPid} = m3ua_core:start_link(Opts),
+ 	% FIXME: register this link with SCCP_SCRC
+@@ -70,10 +75,16 @@ init(L = #sigtran_link{type = m3ua, name = Name, linkset_name = LinksetName,
+ %	{ok, ScrcPid} = sccp_scrc:start_link([{mtp_tx_action, {callback_fn, fun scrc_tx_to_mtp/2, M3uaPid}}]),
+ %	loop(#loop_dat{m3ua_pid = M3uaPid, scrc_pid = ScrcPid}).
+ 
++stop() ->
++    gen_server:cast(?MODULE, stop).
++
+ 
+ set_link_state(#sigtran_link{linkset_name = LinksetName, sls = Sls}, State) ->
+ 	ok = ss7_links:set_link_state(LinksetName, Sls, State).
+ 
++get_link_state(#sigtran_link{linkset_name = LinksetName, sls = Sls}) ->
++    ss7_links:get_link_state(LinksetName, Sls).
++
+ scrc_tx_to_mtp(Prim, Args) ->
+ 	M3uaPid = Args,
+ 	gen_fsm:send_event(M3uaPid, Prim).
+@@ -114,11 +125,14 @@ handle_cast(#primitive{subsystem = 'M', gen_name = 'ASP_INACTIVE'}, L) ->
+ 	io:format("~p: ASP_INACTIVE.ind~n", [?MODULE]),
+ 	set_link_state(L#loop_dat.link, up),
+ 	{noreply, L};
++handle_cast(stop, State) ->
++    gen_fsm:send_all_state_event(State#loop_dat.m3ua_pid, stop),
++    {stop, normal, State};
+ handle_cast(P, L) ->
+-	io:format("~p: Ignoring M3UA prim ~p~n", [?MODULE, P]),
++	%~ io:format("~p: Ignoring M3UA prim ~p~n", [?MODULE, P]),
+ 	{noreply, L}.
+ 
+-terminate(Reason, _S) ->
++terminate(Reason, State) ->
+ 	io:format("terminating ~p with reason ~p", [?MODULE, Reason]),
+ 	ok.
+ 
+diff --git a/src/ss7_links.erl b/src/ss7_links.erl
+index 3aef33c..794a923 100644
+--- a/src/ss7_links.erl
++++ b/src/ss7_links.erl
+@@ -43,11 +43,12 @@
+ 	 terminate/2, code_change/3]).
+ 
+ % our published API
+--export([start_link/0, reload_config/0]).
++-export([start_link/0, reload_config/0, stop/0]).
+ 
+ % client functions, may internally talk to our sccp_user server
+ -export([register_linkset/3, unregister_linkset/1]).
+ -export([register_link/3, unregister_link/2, set_link_state/3]).
++-export([get_link_state/2]).
+ -export([bind_service/2, unbind_service/1]).
+ 
+ -export([get_pid_for_link/2, get_pid_for_dpc_sls/2,
+@@ -95,7 +96,8 @@
+ % initialization code
+ 
+ start_link() ->
+-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], [{debug, [trace]}]).
++	%~ gen_server:start_link({local, ?MODULE}, ?MODULE, [], [{debug, [trace]}]).
++    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+ 
+ init(_Arg) ->
+ 	LinksetTbl = ets:new(ss7_linksets, [ordered_set, named_table,
+@@ -111,6 +113,11 @@ init(_Arg) ->
+ 	{ok, #su_state{linkset_tbl = LinksetTbl, link_tbl = LinkTbl,
+ 			service_tbl = ServiceTbl}}.
+ 
++stop() ->
++    gen_server:cast(?MODULE, stop).
++
++
++    
+ % client side API
+ 
+ % all write operations go through gen_server:call(), as only the ?MODULE
+@@ -145,6 +152,9 @@ unregister_link(LinksetName, Sls) ->
+ set_link_state(LinksetName, Sls, State) ->
+ 	gen_server:call(?MODULE, {set_link_state, {LinksetName, Sls, State}}).
+ 
++get_link_state(LinksetName, Sls) ->
++    gen_server:call(?MODULE, {get_link_state, {LinksetName, Sls}}).
++
+ -spec bind_service(non_neg_integer(), string()) ->
+ 					ok | error().
+ 
+@@ -389,6 +399,15 @@ handle_call({set_link_state, {LsName, Sls, State}}, {FromPid, _}, S) ->
+ 		{reply, ok, S}
+ 	end;
+ 
++handle_call({get_link_state, {LsName, Sls}}, {FromPid, _}, S) ->
++    #su_state{link_tbl = LinkTbl} = S,
++	case ets:lookup(LinkTbl, {LsName, Sls}) of
++	    [] ->
++		{reply, {error, no_such_link}, S};
++	    [Link] -> 
++        {reply, {ok, Link#slink.state}, S}
++    end;
++
+ handle_call({bind_service, {SNum, SName}}, {FromPid, _},
+ 	    #su_state{service_tbl = ServTbl} = S) ->
+ 	NewServ = #service{name = SName, service_nr = SNum,
+@@ -408,6 +427,9 @@ handle_call({unbind_service, {SNum}}, {FromPid, _},
+ 	ets:delete(ServTbl, SNum),
+ 	{reply, ok, S}.
+ 
++
++handle_cast(stop, State) ->
++    {stop, normal, State};
+ handle_cast(Info, S) ->
+ 	error_logger:error_report(["unknown handle_cast",
+ 				  {module, ?MODULE},
+@@ -432,8 +454,11 @@ handle_info(Info, S) ->
+ 				  {info, Info}, {state, S}]),
+ 	{noreply, S}.
+ 
+-terminate(Reason, _S) ->
++terminate(Reason, S) ->
+ 	io:format("terminating ~p with reason ~p", [?MODULE, Reason]),
++    ets:delete(S#su_state.linkset_tbl),
++    ets:delete(S#su_state.link_tbl),
++    ets:delete(S#su_state.service_tbl),
+ 	ok.
+ 
+ code_change(_OldVsn, State, _Extra) ->
+diff --git a/src/ss7_routes.erl b/src/ss7_routes.erl
+index 8965de7..116e172 100644
+--- a/src/ss7_routes.erl
++++ b/src/ss7_routes.erl
+@@ -48,10 +48,10 @@
+ -include_lib("osmo_ss7/include/mtp3.hrl").
+ 
+ % gen_fsm callbacks
+--export([init/1, handle_call/3, handle_info/2, terminate/2, code_change/3]).
++-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+ 
+ % our published API
+--export([start_link/0]).
++-export([start_link/0, stop/0]).
+ 
+ % client functions, may internally talk to our sccp_user server
+ -export([create_route/3, delete_route/3, flush_routes/0]).
+@@ -71,13 +71,17 @@
+ % initialization code
+ 
+ start_link() ->
+-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], [{debug, [trace]}]).
++	%~ gen_server:start_link({local, ?MODULE}, ?MODULE, [], [{debug, [trace]}]).
++	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+ 
+ init(_Arg) ->
+ 	RouteTbl = ets:new(ss7_routes, [ordered_set, named_table,
+ 			     {keypos, #ss7route.remote_pc_mask}]),
+ 	process_flag(trap_exit, true),
+ 	{ok, #sr_state{route_tbl = RouteTbl}}.
++    
++stop() ->
++    gen_server:cast(?MODULE, stop).
+ 
+ % client side API
+ 
+@@ -130,6 +134,9 @@ dump_single_route(#ss7route{remote_pc_mask = {Pc, Mask},
+ 
+ % server side code
+ 
++handle_cast(stop, State) ->
++    {stop, normal, State}.
++
+ handle_call({create_route, {RemotePc, RemoteMask, Name}},
+ 				{_FromPid, _FromRef}, S) ->
+ 	#sr_state{route_tbl = Tbl} = S,

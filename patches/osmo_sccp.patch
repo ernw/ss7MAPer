@@ -1,0 +1,187 @@
+diff --git a/ebin/osmo_sccp.app b/ebin/osmo_sccp.app
+index 42d396e..e771403 100644
+--- a/ebin/osmo_sccp.app
++++ b/ebin/osmo_sccp.app
+@@ -9,7 +9,19 @@
+ 			sccp_scoc,
+ 			sccp_user,
+ 			osmo_sccp_tcap,
+-			sccp_ssn_dump
++			sccp_ssn_dump,
++            'DialoguePDUs',
++            'Remote-Operations-Generic-ROS-PDUs',
++            'Remote-Operations-Information-Objects',
++            'Remote-Operations-Useful-Definitions',
++            'TC-TMP',
++            'TC-Testing-User',
++            'TCAP-Examples',
++            'TCAP-Tools',
++            'TCAPMessages',
++            'TR',
++            'UnidialoguePDUs'
++
+ 		]},
+ 	 {registered, [osmo_sccp_app]},
+ 	 {mod, {osmo_sccp_app, []}},
+diff --git a/rebar.config b/rebar.config
+index 7851051..87c0d28 100644
+--- a/rebar.config
++++ b/rebar.config
+@@ -1,3 +1,6 @@
+ {erl_opts, [debug_info]}.
+-{sub_dirs, ["rel"]}. 
++{sub_dirs, ["rel"]}.
++{deps, [
++        {osmo_ss7, "1", {git, "git://git.osmocom.org/erlang/osmo_ss7/", "master"}}
++    ]}.
+ {eunit_opts, [verbose, {report,{eunit_surefire,[{dir,"."}]}}]}.
+diff --git a/src/osmo_sccp_tcap.erl b/src/osmo_sccp_tcap.erl
+index 96cc32f..42fe8d4 100644
+--- a/src/osmo_sccp_tcap.erl
++++ b/src/osmo_sccp_tcap.erl
+@@ -9,7 +9,7 @@
+ 
+ -include_lib("osmo_ss7/include/osmo_util.hrl").
+ -include_lib("osmo_ss7/include/sccp.hrl").
+--include_lib("TCAP/include/sccp.hrl").
++-include("sccp.hrl").
+ 
+ %% callbacks needed for gen_server behaviour
+ -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+diff --git a/src/sccp_scrc.erl b/src/sccp_scrc.erl
+index e103172..6872d2b 100644
+--- a/src/sccp_scrc.erl
++++ b/src/sccp_scrc.erl
+@@ -31,7 +31,7 @@
+ 
+ -module(sccp_scrc).
+ -behaviour(gen_fsm).
+--export([start_link/1, init/1, terminate/3, idle/2, handle_info/3]).
++-export([start_link/1, init/1, stop/0, terminate/3, idle/2, handle_info/3, handle_event/3]).
+ 
+ -include_lib("osmo_ss7/include/osmo_util.hrl").
+ -include_lib("osmo_ss7/include/sccp.hrl").
+@@ -42,7 +42,8 @@
+ -record(scrc_state, {
+ 		scoc_conn_ets,
+ 		next_local_ref,
+-		sup_pid	% pid() of the supervisor
++		sup_pid,	% pid() of the supervisor
++        ni
+ 	}).
+ % TODO: Integrate with proper SCCP routing / GTT implementation
+ 
+@@ -68,11 +69,15 @@ start_link(InitData) ->
+ 	gen_fsm:start_link({local, sccp_scrc}, sccp_scrc, 
+ 			   [{sup_pid,self()}|InitData], [{debug, []}]).
+ 
++stop() ->
++    gen_fsm:send_all_state_event(?MODULE, stop).
++
+ % gen_fsm init callback, called by start_link()
+ init(InitPropList) ->
+ 	io:format("SCRC Init PropList~p ~n", [InitPropList]),
+ 	UserPid = proplists:get_value(sup_pid, InitPropList),
+-	LoopData = #scrc_state{sup_pid = UserPid, next_local_ref = 0},
++	LoopData = #scrc_state{sup_pid = UserPid, next_local_ref = 0,
++            ni = proplists:get_value(ni, InitPropList)},
+ 	TableRef = ets:new(scoc_by_ref, [set]),
+ 	put(scoc_by_ref, TableRef),
+ 	ok = ss7_links:bind_service(?MTP3_SERV_SCCP, "osmo_sccp"),
+@@ -183,7 +188,7 @@ idle(#primitive{subsystem = 'MTP', gen_name = 'TRANSFER',
+ 	case sccp_routing:route_mtp3_sccp_in(Mtp3) of
+ 		{remote, SccpMsg2, LsName, Dpc} ->
+ 			io:format("routed to remote?!?~n"),
+-			{ok, M3} = create_mtp3_out(SccpMsg2, LsName, Dpc),
++			{ok, M3} = create_mtp3_out(SccpMsg2, LsName, Dpc, LoopDat#scrc_state.ni),
+ 			% generate a MTP-TRANSFER.req primitive to the lower layer
+ 			send_mtp_transfer_down(M3, LsName),
+ 			LoopDat1 = LoopDat;
+@@ -241,13 +246,16 @@ idle(#primitive{subsystem = 'OCRC', gen_name = 'CONNECTION',
+ 	LoopDat2 = send_sccp_local_out(LoopDat, SccpMsg),
+ 	{next_state, idle, LoopDat2}.
+ 
++handle_event(stop, _StateName, StateData) ->
++    {stop, normal, StateData}.
++
+ send_mtp_transfer_down(Mtp3) when is_record(Mtp3, mtp3_msg) ->
+ 	ss7_links:mtp3_tx(Mtp3).
+ 
+ send_mtp_transfer_down(Mtp3, LsName) when is_record(Mtp3, mtp3_msg) ->
+ 	ss7_links:mtp3_tx(Mtp3, LsName).
+ 
+-create_mtp3_out(SccpMsg, LsName, Dpc) when is_record(SccpMsg, sccp_msg) ->
++create_mtp3_out(SccpMsg, LsName, Dpc, Ni) when is_record(SccpMsg, sccp_msg) ->
+ 	case Dpc of
+ 	    undefined ->
+ 		{error, dpc_undefined};
+@@ -263,7 +271,7 @@ create_mtp3_out(SccpMsg, LsName, Dpc) when is_record(SccpMsg, sccp_msg) ->
+ 			M3R = #mtp3_routing_label{sig_link_sel = 0,
+ 				  origin_pc = Opc,
+ 				  dest_pc = Dpc},
+-			M3 = #mtp3_msg{network_ind = ?MTP3_NETIND_INTERNATIONAL,
++			M3 = #mtp3_msg{network_ind = Ni,
+ 				       service_ind = ?MTP3_SERV_SCCP,
+ 				       routing_label = M3R,
+ 				       payload = SccpEnc},
+@@ -271,21 +279,21 @@ create_mtp3_out(SccpMsg, LsName, Dpc) when is_record(SccpMsg, sccp_msg) ->
+ 		end
+ 	end.
+ 
+-create_mtp3_out(SccpMsg, LsName) when is_record(SccpMsg, sccp_msg) ->
++create_mtp3_out(SccpMsg, LsName, Ni) when is_record(SccpMsg, sccp_msg) ->
+ 	CalledParty = proplists:get_value(called_party_addr,
+ 					  SccpMsg#sccp_msg.parameters),
+ 	% we _have_ to have a destination point code here
+ 	Dpc = CalledParty#sccp_addr.point_code,
+-	create_mtp3_out(SccpMsg, LsName, Dpc).
++	create_mtp3_out(SccpMsg, LsName, Dpc, Ni).
+ 
+ send_sccp_local_out(LoopDat, SccpMsg) when is_record(SccpMsg, sccp_msg) ->
+ 	case sccp_routing:route_local_out(SccpMsg) of
+ 		{remote, SccpMsg2, LsName, Dpc} ->
+-			% FIXME: get to MTP-TRANSFER.req
+-			{ok, M3} = create_mtp3_out(SccpMsg2, LsName, Dpc),
+-			% generate a MTP-TRANSFER.req primitive to the lower layer
+-			send_mtp_transfer_down(M3, LsName),
+-			LoopDat;
++            % FIXME: get to MTP-TRANSFER.req
++			{ok, M3} = create_mtp3_out(SccpMsg2, LsName, Dpc, LoopDat#scrc_state.ni),
++            % generate a MTP-TRANSFER.req primitive to the lower layer
++			Ret = send_mtp_transfer_down(M3, LsName),
++            LoopDat;
+ 		{local, SccpMsg2, UserPid} ->
+ 			deliver_to_scoc_sclc(LoopDat, SccpMsg2, UserPid);
+ 		{error, Reason} ->
+diff --git a/src/sccp_user.erl b/src/sccp_user.erl
+index 3f51034..0f508f6 100644
+--- a/src/sccp_user.erl
++++ b/src/sccp_user.erl
+@@ -41,7 +41,7 @@
+ 	 terminate/2, code_change/3]).
+ 
+ % our published API
+--export([start_link/0]).
++-export([start_link/0, stop/0]).
+ 
+ % client functions, may internally talk to our sccp_user server
+ -export([bind_ssn/1, bind_ssn/2, unbind_ssn/2, pid_for_ssn/2, local_ssn_avail/2,
+@@ -66,6 +66,9 @@ init(_Arg) ->
+ 				       {keypos, #scu_record.ssn_pc}]),
+ 	{ok, #scu_state{user_table = UserTbl}}.
+ 
++stop() ->
++    gen_server:cast(?MODULE, stop).
++
+ % client side code
+ 
+ bind_ssn(Ssn) when is_integer(Ssn) ->
+@@ -143,6 +146,8 @@ handle_call({unbind_ssn, Ssn, Pc}, {FromPid, _FromRef}, S) ->
+ 	ets:delete_object(Tbl, DelRec),
+ 	{reply, ok, S}.
+ 
++handle_cast(stop, State) ->
++    {stop, normal, State};
+ handle_cast(Info, S) ->
+ 	error_logger:error_report(["unknown handle_cast",
+ 				  {module, ?MODULE},

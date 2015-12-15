@@ -1,0 +1,12 @@
+{application, ss7test,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ss7test_app, ["./config"]}},
+  {env, []}
+ ]}.
