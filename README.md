@@ -67,9 +67,9 @@ You will need:
         ln -sd ../../signerl/SCCP deps/osmo_sccp/deps/SCCP   
         ln -sd ../../signerl/TCAP deps/osmo_sccp/deps/TCAP   
         mkdir deps/osmo_map/deps   
-        ln -sd ../../osmo_ss7 deps/osmo_sccp/deps/osmo_ss7   
-        ln -sd ../../epcap deps/osmo_sccp/deps/epcap   
-        ln -sd ../../pkt deps/osmo_sccp/deps/pkt   
+        ln -sd ../../osmo_ss7 deps/osmo_map/deps/osmo_ss7   
+        ln -sd ../../epcap deps/osmo_map/deps/epcap   
+        ln -sd ../../pkt deps/osmo_map/deps/pkt   
            
     And copy some files in place:   
         
