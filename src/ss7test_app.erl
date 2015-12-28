@@ -217,7 +217,7 @@ test_sri(Gts, L) ->
                           {local,22},_}}}}|_] ->
                     io:format("\e[91;1mReceived SendRoutingInfoRes~n\e[39;49;0m");
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding SendRoutingInfo\n\e[39;49;0m")
@@ -241,15 +241,23 @@ test_srifs(Gts, L) ->
               {ok, Results} ->
                 io:format("\e[97;1mGot answer for sendRoutingInfoForSM\n~w\n\e[39;49;0m", [Results]),
                 case Results of
-                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, _}}}|_] ->
+                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, Res}}}|_] ->
                     case {Present, Local} of
                       {1, 6} ->
                         io:format("\e[91;1mSubscriber is absent~n\e[39;49;0m");
                       _ ->
                         io:format("\e[92;1mReceived Error: Present ~w, Local ~w~n\e[39;49;0m", [Present, Local])
                     end;
+                  [{basicROS,
+                   {returnResult,
+                    {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult',
+                     {present,1},{'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult_result',
+                      {local,45}, Res}}}}|_] ->
+                    {'RoutingInfoForSM-Res',_,
+                      {'LocationInfoWithLMSI',Loc,_,_,_,_},_,_} = Res,
+                    io:format("\e[91;1mReceived routingInfoForSM, Mobile Station ~w", [ss7test_helper:decode_phonenumber(Loc)]);
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding SendRoutingInfoForSM\n\e[39;49;0m")
@@ -283,7 +291,7 @@ test_si(Gts, L) ->
                           {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult_result',
                             {local,58},
                               Imsi }}}}|_] ->
-                    io:format("\e[91;1mReceived IMSI ~w~n\e[39;49;0m", [Imsi]),
+                    io:format("\e[91;1mReceived IMSI ~w~n\e[39;49;0m", [ss7test_helper:decode_imsi(Imsi)]),
                     L#loop_dat{imsi = Imsi}
                 end;
               _->
@@ -336,7 +344,7 @@ test_sai(Gts, L, Nr) ->
                         end
                     end;
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding sendAuthenticationInfo\n\e[39;49;0m")
@@ -369,7 +377,7 @@ test_rss(Gts, L) ->
                           {local,10},_}}}}|_] ->
                     io:format("\e[91;1mReceived forwardingInfo, registerSS is working~n\e[39;49;0m");
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding registerSS\n\e[39;49;0m")
@@ -402,7 +410,7 @@ test_ess(Gts, L) ->
                           {local,11},_}}}}|_] ->
                     io:format("\e[91;1mReceived forwardingInfo, eraseSS is working~n\e[39;49;0m");
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding eraseSS\n\e[39;49;0m")
@@ -431,7 +439,7 @@ test_ul(Gts, L) ->
                   [{basicROS,{invoke,{'MapSpecificPDUs_continue_components_SEQOF_basicROS_invoke',{present,2},asn1_NOVALUE,{local,7},_}}}|_] ->
                     io:format("\e[91;1mReceived insertSubscriberData, updateLocation is working~n\e[39;49;0m");
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding updateLocation\n\e[39;49;0m")
@@ -463,7 +471,7 @@ test_ati(Gts, L) ->
                         io:format("\e[91;1mReceived Error: Present ~w, Local ~w~n\e[39;49;0m", [Present, Local])
                     end;
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding anyTimeInerrogation\n\e[39;49;0m")
@@ -496,7 +504,7 @@ test_pms(Gts, L) ->
                           {local,67},_}}}}|_] ->
                     io:format("\e[91;1mReceived purgeMS-Res, purgeMS is working~n\e[39;49;0m");
                   _ ->
-                    io:format("\e[92;1mNo Error.~n\e[39;49;0m")
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
                 io:format("\e[91;1mError decoding purgeMs\n\e[39;49;0m")

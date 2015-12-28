@@ -1,7 +1,9 @@
 -module(ss7test_helper).
 -author('Daniel Mende <mail@c0decafe.de>').
 
--export([encode_phonenumber/4, encode_msisdn/4,
+-export([encode_phonenumber/4, 
+         decode_phonenumber/1,
+         encode_msisdn/4,
          decode_imsi/1,
          remove_firstN/2,
          tup2bin/1]).
@@ -30,6 +32,9 @@ encode_phonenumber([Last]) ->
     {<<15:4, Last:4>>, 1};
 encode_phonenumber([]) ->
     {<<>>, 0}.
+
+decode_phonenumber(<<_Extension:1, _NatureOfNumber:1, _NumberPlan:4, Number/binary>>) ->
+    decode_imsi(Number).
 
 encode_msisdn(Extension, NatureOfNumber, NumberPlan, Number) ->
     {EncNumber, _} = encode_phonenumber(Number),

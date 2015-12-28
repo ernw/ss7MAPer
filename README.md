@@ -1,4 +1,5 @@
 # ss7MAPer
+
 SS7 MAP (pen-)testing toolkit
 
 ## Get it running
@@ -84,19 +85,19 @@ You will need:
 
 The config file is split in 4 section, sctp, m3ua, sccp and target.
 
-In the sctp section source and destination ip as well as source and destination port of the SCTP connection are configured.
+In the *sctp* section source and destination ip as well as source and destination port of the SCTP connection are configured.
 
-In the m3ua section all the M3UA parameters, like local and remote point code are configured.
+In the *m3ua* section all the M3UA parameters, like local and remote point code are configured.
 
-In the sccp section currently only the local (or source) global title needs to be configured.
+In the *sccp* section currently only the local (or source) global title needs to be configured.
 
-Last but not least in the target section information about the tested environment need to be configured, like the global title of the HLR, or the MSISDN of the tested phone are configured.
+Last but not least in the *target* section information about the tested environment need to be configured, like the global title of the HLR, or the MSISDN of the tested phone.
 
 Be sure to modify it to your needs.
 
 ## Running the tool
 
-To run the tool one needs to start an rebar shell:
+To run the tool one needs to start a rebar shell:
 
     cd ss7MAPer   
     rebar shell   
