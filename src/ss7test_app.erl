@@ -6,6 +6,8 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 
+-compile([export_all]).     % for debugging
+
 -include_lib("osmo_ss7/include/osmo_util.hrl").
 -include_lib("osmo_ss7/include/osmo_ss7.hrl").
 -include_lib("osmo_ss7/include/m3ua.hrl").
@@ -71,6 +73,7 @@ init(Configfile) ->
     {gt_msc, GT_Msc} = lists:keyfind(gt_msc, 1, Target),
     {gt_sgsn, GT_Sgsn} = lists:keyfind(gt_sgsn, 1, Target),
     {msisdn, Msisdn} = lists:keyfind(msisdn, 1, Target),
+    {imsi, Imsi} = lists:keyfind(msisdn, 1, Target),
     Msisdn_enc = ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                     ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                     Msisdn),
@@ -116,7 +119,7 @@ init(Configfile) ->
     wait_for_link(Link),
     #loop_dat{m3ua_pid = M3uaPid, scrc_pid = ScrcPid, ss7links_pid = SS7linksPid, ss7routes_pid = SS7routesPid, link = Link,
                 local_pc = Local_PC, remote_pc = Remote_PC, gt_local = GT_Local, gt_hlr = GT_Hlr, gt_vlr = GT_Vlr, gt_msc = GT_Msc, 
-                gt_sgsn = GT_Sgsn, msisdn = Msisdn_enc, scenter = SCenter_enc, fnumber = FNumber_enc}.
+                gt_sgsn = GT_Sgsn, msisdn = Msisdn_enc, imsi = Imsi, scenter = SCenter_enc, fnumber = FNumber_enc}.
 
 wait_for_link(Link) ->
     case ss7_link_m3ua:get_link_state(Link) of
