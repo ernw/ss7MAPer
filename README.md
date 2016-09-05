@@ -6,7 +6,7 @@ SS7 MAP (pen-)testing toolkit
 
 You will need:
 
- * Erlang. Get it from your repo or from http://www.erlang.org
+ * Erlang. Get it from your repo or from http://www.erlang.org. Currently only building with Erlang <= 17.5 due to a bug in the Erlang ASN.1 compiler.
 
  * Rebar. Get it from your repo or from https://github.com/rebar/rebar
 
