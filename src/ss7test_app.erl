@@ -73,7 +73,7 @@ init(Configfile) ->
     {gt_msc, GT_Msc} = lists:keyfind(gt_msc, 1, Target),
     {gt_sgsn, GT_Sgsn} = lists:keyfind(gt_sgsn, 1, Target),
     {msisdn, Msisdn} = lists:keyfind(msisdn, 1, Target),
-    {imsi, Imsi} = lists:keyfind(msisdn, 1, Target),
+    {imsi, Imsi} = lists:keyfind(imsi, 1, Target),
     Msisdn_enc = ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                     ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                     Msisdn),
