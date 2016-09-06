@@ -1,20 +1,20 @@
 diff --git a/include/osmo_ss7.hrl b/include/osmo_ss7.hrl
-index 80dcb3e..5f8c970 100644
+index 80dcb3e..5ccf366 100644
 --- a/include/osmo_ss7.hrl
 +++ b/include/osmo_ss7.hrl
 @@ -12,9 +12,12 @@
-        name            :: string(),
-        linkset_name    :: string(),
-        sls             :: non_neg_integer(),
--       local           :: record(sigtran_peer),
--       remote          :: record(sigtran_peer),
--       role            :: role()
-+       local           :: #sigtran_peer{},
-+       remote          :: #sigtran_peer{},
-+       role            :: role(),
-+    asp_id      :: integer(),
-+    route_ctx   :: integer(),
-+    net_app     :: integer()
+ 	name		:: string(),
+ 	linkset_name	:: string(),
+ 	sls		:: non_neg_integer(),
+-	local		:: record(sigtran_peer),
+-	remote		:: record(sigtran_peer),
+-	role		:: role()
++	local           :: #sigtran_peer{},
++	remote          :: #sigtran_peer{},
++	role            :: role(),
++	asp_id          :: integer(),
++	route_ctx       :: integer(),
++	net_app         :: integer()
  }).
  
  
