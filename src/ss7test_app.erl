@@ -244,7 +244,7 @@ test_srifs(Gts, L) ->
               {ok, Results} ->
                 io:format("\e[97;1mGot answer for sendRoutingInfoForSM\n~w\n\e[39;49;0m", [Results]),
                 case Results of
-                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, Res}}}|_] ->
+                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, _}}}|_] ->
                     case {Present, Local} of
                       {1, 6} ->
                         io:format("\e[91;1mSubscriber is absent~n\e[39;49;0m");
