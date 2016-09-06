@@ -82,6 +82,7 @@ You will need:
         
         rebar co   
            
+If all the steps above are too much to do by hand (as for me testing ;) you can use the build script here: https://github.com/ernw/ss7MAPer/blob/master/prepare_n_build.sh
 
 ## The config file
 
