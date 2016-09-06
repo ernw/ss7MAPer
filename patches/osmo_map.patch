@@ -1,3 +1,106 @@
+diff --git a/asn1/MAP-Contracts.asn b/asn1/MAP-Contracts.asn
+index df7e340..fdd53bd 100644
+--- a/asn1/MAP-Contracts.asn
++++ b/asn1/MAP-Contracts.asn
+@@ -36,79 +36,79 @@ FROM
+ ;
+ 
+ locationUpdatingContract-v3  CONTRACT ::= {
+-       OPERATIONS OF locationUpdatingPackage-v3
++       OPERATIONS OF {locationUpdatingPackage-v3}
+ }
+ 
+ locationCancellationContract-v3  CONTRACT ::= {
+-       OPERATIONS OF locationCancellationPackage-v3
++       OPERATIONS OF {locationCancellationPackage-v3}
+ }
+ 
+ roamingNumberEnquiryContract-v3  CONTRACT ::= {
+-       OPERATIONS OF roamingNumberEnquiryPackage-v3
++       OPERATIONS OF {roamingNumberEnquiryPackage-v3}
+ }
+ 
+ infoRetrievalContract-v3  CONTRACT ::= {
+-       OPERATIONS OF infoRetrievalPackage-v3
++       OPERATIONS OF {infoRetrievalPackage-v3}
+ }
+ 
+ infoRetrievalContract-v2  CONTRACT ::= {
+-       OPERATIONS OF infoRetrievalPackage-v2
++       OPERATIONS OF {infoRetrievalPackage-v2}
+ }
+ 
+ interVlrInfoRetrievalContract-v3  CONTRACT ::= {
+-       OPERATIONS OF interVlrInfoRetrievalPackage-v3
++       OPERATIONS OF {interVlrInfoRetrievalPackage-v3}
+ }
+ 
+ interVlrInfoRetrievalContract-v2  CONTRACT ::= {
+-       OPERATIONS OF interVlrInfoRetrievalPackage-v2
++       OPERATIONS OF {interVlrInfoRetrievalPackage-v2}
+ }
+ 
+ imsiRetrievalContract-v2  CONTRACT ::= {
+-       OPERATIONS OF imsiRetrievalPackage-v2
++       OPERATIONS OF {imsiRetrievalPackage-v2}
+ }
+ 
+ callControlTransferContract-v4  CONTRACT ::= {
+-       OPERATIONS OF callControlTransferPackage-v4
++       OPERATIONS OF {callControlTransferPackage-v4}
+ }
+ 
+ interrogationContract-v3  CONTRACT ::= {
+-       OPERATIONS OF interrogationPackage-v3
++       OPERATIONS OF {interrogationPackage-v3}
+ }
+ 
+ handoverControlContract-v3  CONTRACT ::= {
+-       OPERATIONS OF handoverControlPackage-v3
++       OPERATIONS OF {handoverControlPackage-v3}
+ }
+ 
+ subscriberDataMngtStandAloneContract-v3  CONTRACT ::= {
+-       OPERATIONS OF subscriberDataMngtStandAlonePackage-v3
++       OPERATIONS OF {subscriberDataMngtStandAlonePackage-v3}
+ }
+ 
+ equipmentMngtContract-v3  CONTRACT ::= {
+-       OPERATIONS OF equipmentMngtPackage-v3
++       OPERATIONS OF {equipmentMngtPackage-v3}
+ }
+ 
+ subscriberDataMngtContract-v3  CONTRACT ::= {
+-       OPERATIONS OF subscriberDataMngtPackage-v3
++       OPERATIONS OF {subscriberDataMngtPackage-v3}
+ }
+ 
+ resetContract-v2  CONTRACT ::= {
+-       OPERATIONS OF resetPackage-v2
++       OPERATIONS OF {resetPackage-v2}
+ }
+ 
+ tracingStandAloneContract-v3  CONTRACT ::= {
+-       OPERATIONS OF tracingStandAlonePackage-v3
++       OPERATIONS OF {tracingStandAlonePackage-v3}
+ }
+ 
+ functionalSsContract-v2  CONTRACT ::= {
+-       OPERATIONS OF functionalSsPackage-v2
++       OPERATIONS OF {functionalSsPackage-v2}
+ }
+ 
+ tracingContract-v3  CONTRACT ::= {
+-       OPERATIONS OF tracingPackage-v3
++       OPERATIONS OF {tracingPackage-v3}
+ }
+ 
+ unstructuredSsContract-v2  CONTRACT ::= {
+-       OPERATIONS OF unstructuredSsPackage-v2
++       OPERATIONS OF {unstructuredSsPackage-v2}
+ }
+ 
+ -- FIXME: missing packages / contracts
 diff --git a/ebin/osmo_map.app b/ebin/osmo_map.app
 index 6502f41..6919668 100644
 --- a/ebin/osmo_map.app
