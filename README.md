@@ -59,6 +59,8 @@ You will need:
            
     Also the osmo libs have dependencies on each other and some other deps are shared, so I created some symlinks:   
         
+        mkdir deps/epcap/deps
+        ln -sd ../../pkt deps/epcap/deps/pkt
         mkdir deps/osmo_sccp/deps   
         ln -sd ../../osmo_ss7 deps/osmo_sccp/deps/osmo_ss7   
         ln -sd ../../epcap deps/osmo_sccp/deps/epcap   
