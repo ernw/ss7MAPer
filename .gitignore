@@ -5,6 +5,7 @@ deps
 *.plt
 erl_crash.dump
 ebin
-rel/example_project
+rel/ss7MAPer
+rel/files
 .concrete/DEV_MODE
 .rebar

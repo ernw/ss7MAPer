@@ -2,7 +2,7 @@
 -author('Daniel Mende <mail@c0decafe.de>').
 
 -include_lib("osmo_map/src/map.hrl").
--include("ss7test_app.hrl").
+-include("ss7MAPer.hrl").
 
 -compile([export_all]).
 
@@ -17,19 +17,19 @@
 
 % MAP Definitions
 -define(IMSI,                       hex:hexstr_to_bin("01020304050607f8")).
--define(IMSI_AS_NR,                 ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+-define(IMSI_AS_NR,                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_LAND_MOBILE,
                                         [0,1,0,2,0,3,0,4,0,5,0,6,0,7,8])).
 -define(TMSI,                       hex:hexstr_to_bin("1234")).
 
--define(MSISDN,                     ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+-define(MSISDN,                     ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                                         [1,2,3,4,5,6,7,8,9,0])).
 
 -define(SERVICE_CENTER_ADDRESS,     hex:hexstr_to_bin("010203040506f1")).
 -define(SERVICE_CENTER_ADDRESS_OA,  hex:hexstr_to_bin("010203040506f1")).
 -define(SERVICE_CENTER_ADDRESS_DA,  hex:hexstr_to_bin("010203040506f1")).
--define(GGSN,                       ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+-define(GGSN,                       ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                                         [1,2,3,4,5,6,7,8,9,0])).
 
@@ -37,16 +37,16 @@
 
 % SMS Definitions
 -define(ORIGINATING_ADDRESS,        hex:hexstr_to_bin("0b9010203040506f1")).
--define(DESTINATION_ADDRESS,        ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+-define(DESTINATION_ADDRESS,        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                                         [1,2,3,4,5,6,7,8,9,0])).
--define(SOURCE_ADDRESS,             ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+-define(SOURCE_ADDRESS,             ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                                         [1,2,3,4,5,6,7,8,9,0])).
 -define(SMS_DEST_NR,                [1,2,3,4,5,6,7,8,9,0]).
 -define(SMS_SRC_NR,                 [1,2,3,4,5,6,7,8,9,0]).
 
--define(IMEI,                       ss7test_helper:encode_phonenumner([1,2,3,4,5,6,7,8,9,0])).
+-define(IMEI,                       ss7_helper:encode_phonenumner([1,2,3,4,5,6,7,8,9,0])).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % helper
@@ -93,7 +93,7 @@ create_testSMSPDU_mt() ->
     EncSMSText = 'sms_7bit_encoding':to_7bit(SMSText),
     SMSLen = string:len(SMSText),
     Timestamp = hex:hexstr_to_bin("51803001258080"),
-    DA = ss7test_helper:encode_phonenumber(?NUMBER_EXTENSION_NONE,
+    DA = ss7_helper:encode_phonenumber(?NUMBER_EXTENSION_NONE,
             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
             ?SMS_SRC_NR),
     <<0:4, 4:4, DA/binary, 0:8, 0:8, Timestamp/binary, SMSLen:8, EncSMSText/binary>>.
@@ -102,17 +102,17 @@ create_testSMSPDU_mo() ->
     SMSText = "ERNW test SMS 31337",
     EncSMSText = 'sms_7bit_encoding':to_7bit(SMSText),
     SMSLen = string:len(SMSText),
-    DA = ss7test_helper:encode_phonenumber(?NUMBER_EXTENSION_NONE,
+    DA = ss7_helper:encode_phonenumber(?NUMBER_EXTENSION_NONE,
             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
             ?SMS_DEST_NR),
     <<1:8, 23:8, DA/binary, 0:8, 0:8, SMSLen:8, EncSMSText/binary>>.
 
 create_mt_forwardSM_v2() ->
-    create_mt_forwardSM_v2(create_testSMSPDU_mt()).
-create_mt_forwardSM_v2(SMSPDU) ->
+    create_mt_forwardSM_v2(create_testSMSPDU_mt(), ?IMSI, ?SERVICE_CENTER_ADDRESS_DA).
+create_mt_forwardSM_v2(SMSPDU, Imsi, Scada) ->
     MapData = { 'ForwardSM-Arg',
-                {imsi, ?IMSI},
-                {serviceCentreAddressOA, ?SERVICE_CENTER_ADDRESS_DA},
+                {imsi, Imsi},
+                {serviceCentreAddressOA, Scada},
                 SMSPDU,
                 asn1_NOVALUE, asn1_NOVALUE},
     Dialog = build_dialog_request({0,4,0,0,1,0,25,2}),
@@ -132,11 +132,11 @@ create_mt_forwardSM(SMSPDU) ->
     encode_map_pdu(Dialog, 44, MapData).
     
 create_mo_forwardSM_v2() ->
-    create_mo_forwardSM_v2(create_testSMSPDU_mo()).
-create_mo_forwardSM_v2(SMSPDU) ->
+    create_mo_forwardSM_v2(create_testSMSPDU_mo(), ?SERVICE_CENTER_ADDRESS_DA, ?MSISDN).
+create_mo_forwardSM_v2(SMSPDU, Scada, Msisdn) ->
     MapData = { 'ForwardSM-Arg',
-                {serviceCentreAddressDA, ?SERVICE_CENTER_ADDRESS_DA},
-                {msisdn, ?MSISDN},
+                {serviceCentreAddressDA, Scada},
+                {msisdn, Msisdn},
                 SMSPDU,
                 asn1_NOVALUE, asn1_NOVALUE},
     Dialog = build_dialog_request({0,4,0,0,1,0,21,2}),
@@ -198,7 +198,7 @@ create_sendRoutingInfo(Msisdn, OrGsmSCF) ->
                 basicCall,
                 asn1_NOVALUE,
                 asn1_NOVALUE,
-                ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         OrGsmSCF),     %gsmc-OrGsmSCF-Address
                 <<7,0,1,68,40,9,150,31>>,   %callReferenceNumber
@@ -249,37 +249,13 @@ create_sendRoutingInfo(Msisdn, OrGsmSCF) ->
     {ok, EncMapPDU} = map:encode('MapSpecificPDUs', MapPDU),
     EncMapPDU.
 
-%~ create_sendRoutingInfoForGprs() ->
-    %~ MapData = {'SendRoutingInforForGprsArg',
-                %~ ?IMSI,
-                %~ asn1_NOVALUE,
-                %~ ?GGSN},
-    %~ MapPDU = {'begin',
-        %~ {'MapSpecificPDUs_begin',
-            %~ get_transactionId(), 
-            %~ {'EXTERNAL',
-                %~ {0,0,17,773,1,1,1},
-                %~ asn1_NOVALUE,asn1_NOVALUE,
-                %~ {'single-ASN1-type',<<96,15,128,2,7,128,161,9,6,7,4,0,0,1,0,33,4>>}},
-            %~ [{basicROS,
-                 %~ {invoke,
-                     %~ {'MapSpecificPDUs_begin_components_SEQOF_basicROS_invoke',
-                         %~ {present,1},
-                         %~ asn1_NOVALUE,
-                         %~ {local,24},
-                         %~ MapData}}}]}},
-    %~ {ok, EncMapPDU} = map:encode('MapSpecificPDUs', MapPDU),
-    %~ EncMapPDU.
-
-%~ create_registerSS() ->
-    %~ create_registerSS(?IMSI, ?DESTINATION_ADDRESS).
 create_registerSS(Imsi, Origin, DestinationNumber) ->
     MapDialoguePDU = {'map-open',
                     {'MAP-OpenInfo',
-                        ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_LAND_MOBILE,
                             Imsi),    %destinationReference
-                        ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                             Origin),   %originationReference
                         asn1_NOVALUE }},
@@ -325,10 +301,10 @@ create_registerSS(Imsi, Origin, DestinationNumber) ->
 create_eraseSS(Imsi, Origin) ->
     MapDialoguePDU = {'map-open',
                     {'MAP-OpenInfo',
-                        ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_LAND_MOBILE,
                             Imsi),    %destinationReference
-                        ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                             Origin),   %originationReference
                         asn1_NOVALUE }},
@@ -371,10 +347,10 @@ create_updateLocation() ->
 create_updateLocation(Imsi, MscNr, VlrNr) ->
     MapData = {'UpdateLocationArg',
                 Imsi,
-                ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         MscNr),     %msc-Number
-                ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         VlrNr),     %vlr-Number
                 asn1_NOVALUE, %<<59,151,2,0>>,             %lmsi
@@ -416,7 +392,7 @@ create_anyTimeInerrogation(Imsi, GsmSCF) ->
                      'NULL',asn1_NOVALUE,asn1_NOVALUE,
                      asn1_NOVALUE,asn1_NOVALUE,asn1_NOVALUE,
                      asn1_NOVALUE,asn1_NOVALUE,asn1_NOVALUE},
-                 ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         GsmSCF),     %gsmSCF-Address
                  asn1_NOVALUE},
@@ -468,7 +444,7 @@ create_purgeMs() ->
 create_purgeMs(Imsi, VlrNr) ->
     MapData = {'PurgeMs-Arg',
                 Imsi,
-                ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         VlrNr),   %VLR number
                 asn1_NOVALUE,   %SGSN number
@@ -481,8 +457,10 @@ create_purgeMs(Imsi, VlrNr) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 create_provideSubscriberInfo() ->
+    create_provideSubscriberInfo(?IMSI).
+create_provideSubscriberInfo(Imsi) ->
     MapData = {'ProvideSubscriberInfoArg',
-         ?IMSI,
+         Imsi,
          asn1_NOVALUE,
          {'RequestedInfoMAP-MS-DataTypes',
             'NULL',         %locationInformation
@@ -515,20 +493,22 @@ create_sendIdentification() ->
     encode_map_pdu(Dialog, 55, MapData).
 
 create_provideRoamingNumber() ->
+    create_provideRoamingNumber(?IMSI, ?MSISDN, ?LOCAL_GLOBAL_TITLE, ?LOCAL_GLOBAL_TITLE).
+create_provideRoamingNumber(Imsi, Msisdn, MscNr, GmscNr) ->
     MapData = {'ProvideRoamingNumberArg',
-                 ?IMSI,
-                 ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                 Imsi,
+                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
-                            [1,2,3,4,5,6,7,8,9]),         %msc-Number
-                 ?MSISDN,
+                            MscNr),         %msc-Number
+                 Msisdn,
                  asn1_NOVALUE,
                  {'ExternalSignalInfo','gsm-0408',
                      <<4,1,160>>,
                      asn1_NOVALUE},
                  asn1_NOVALUE,asn1_NOVALUE,
-                 ss7test_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
-                            [1,2,3,4,5,6,7,8,9,0]),          %gmsc-Address
+                            GmscNr),          %gmsc-Address
                  <<112,4,1,54,22,114,55>>,          %callReferenceNumber
                  asn1_NOVALUE,asn1_NOVALUE,asn1_NOVALUE,
                  asn1_NOVALUE,
@@ -540,8 +520,10 @@ create_provideRoamingNumber() ->
     encode_map_pdu(Dialog, 4, MapData).
 
 create_cancelLocation() ->
+    create_cancelLocation(?IMSI).
+create_cancelLocation(Imsi) ->
     MapData = {'CancelLocationArg',
-                 {imsi,?IMSI},
+                 {imsi,Imsi},
                  updateProcedure,
                  asn1_NOVALUE,
                  asn1_NOVALUE},
@@ -587,4 +569,3 @@ create_insertSubscriberData() ->
         },
     Dialog = build_dialog_request('subscriberDataMngtContext-v3'),
     encode_map_pdu(Dialog, 7, MapData).
-

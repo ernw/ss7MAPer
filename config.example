@@ -1,14 +1,14 @@
 {sctp, [
-    {local_ip, {10,1,2,3}}, 
+    {local_ip, {127,0,0,2}}, 
     {local_port, 2905}, 
-    {remote_ip, {10,1,2,4}}, 
+    {remote_ip, {127,0,0,1}}, 
     {remote_port, 2905}
 ]}.
 {m3ua, [
     {local_pc, 10},
     {remote_pc, 20},
     {network_ind, 2},
-    {route_ctx, 1},
+    {route_ctx, 6},
     {asp_id, none},
     {net_appearance, none}
 ]}.
@@ -18,10 +18,12 @@
 {target, [
     {gt_hlr, [1,2,3,4,5,6,7,8,9,0]},
     {gt_vlr, [1,2,3,4,5,6,7,8,9,1]},
-    {gt_msc, []},
-    {gt_sgsn, []},
+    {gt_msc, [1,2,3,4,5,6,7,8,9,2]},
+    {gt_sgsn, [1,2,3,4,5,6,7,8,9,3]},
+    {gt_gmsc, [1,2,3,4,5,6,7,8,9,4]},
+    {gt_smsc, [1,2,3,4,5,6,7,8,9,5]},
     {msisdn, [0,9,8,7,6,5,4,3,2,1]},
-    {imsi, [0,9,8,7,6,5,4,3,2,1]},
-    {service_center, [9,8,7,6,5,4,3,2,1]}
+    {imsi, "01020304050607f8"},
+    {service_center, [9,8,7,6,5,4,3,2,1]},
     {forward_number, [9,8,7,6,5,4,3,2,0]}
 ]}.

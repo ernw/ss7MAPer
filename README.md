@@ -2,6 +2,12 @@
 
 SS7 MAP (pen-)testing toolkit
 
+## Binary releases
+
+As a lot of people run into problems building the tool, there are binary releases which can be found here: https://github.com/ernw/ss7MAPer/tree/master/releases
+
+If you use the binary version, skip right over the next chapter.
+
 ## Get it running
 
 You will need:
@@ -100,21 +106,35 @@ Be sure to modify it to your needs.
 
 ## Running the tool
 
+### Running a source build
+
 To run the tool one needs to start a rebar shell:
 
     cd ss7MAPer   
     rebar shell   
 
-Then the SIGTRAN connection needs to be established:
+Start the application and its dependencies with:
 
-    Pid = ss7test_app:start(1, "./configfile").   
+    application:start(sasl).
+    application:start(ss7MAPer).
 
 If everything is set up correctly the m3ua connection comes up.
 
-To run the HLR tests, simply enter:
+### Running the binary release
 
-    Pid ! {test_hlr}.   
+Run the application by starting it from the root directory:
 
+    cd ss7MAPer
+    ./bin/ss7MAPer console
 
+If everything is set up correctly the m3ua connection comes up.
 
-        
+### Using the tool
+
+Once the application is started, there are some commands that can be executed from the erlang command line:
+
+ - ss7MAPer:test\_hlr()
+ - ss7MAPer:test\_msc()
+ - ss7MAPer:test\_smsc()
+
+and each of them does exactly as its called, running MAP tests against the targets defined in the config file.

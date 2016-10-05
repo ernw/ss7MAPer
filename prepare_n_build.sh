@@ -43,3 +43,8 @@ cp deps/signerl/SCCP/itu/include/sccp.hrl deps/osmo_sccp/src/
 cp deps/signerl/TCAP/include/tcap.hrl deps/osmo_map/src/
 
 rebar co
+
+cd rel/
+rebar create-node nodeid=ss7MAPer
+cd ..
+rebar generate

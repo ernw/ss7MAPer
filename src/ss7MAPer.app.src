@@ -1,0 +1,13 @@
+{application, ss7MAPer,
+ [
+  {description, "SS7 MAP (Pen-)testing toolkit"},
+  {vsn, "1"},
+  {registered, [ss7test]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  sasl
+                 ]},
+  {mod, { ss7MAPer_app, ["./config"]}},
+  {env, []}
+ ]}.
