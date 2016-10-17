@@ -47,17 +47,17 @@ connect(Configfile) ->
     {gt_smsc, GT_Smsc} = lists:keyfind(gt_smsc, 1, Target),
     {msisdn, Msisdn} = lists:keyfind(msisdn, 1, Target),
     {imsi, Imsi} = lists:keyfind(imsi, 1, Target),
-    Msisdn_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
-                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
-                    Msisdn),
+    %~ Msisdn_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    %~ ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    %~ Msisdn),
     {service_center, SCenter} = lists:keyfind(service_center, 1, Target),
-    SCenter_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
-                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
-                    SCenter),
+    %~ SCenter_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    %~ ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    %~ SCenter),
     {forward_number, FNumber} = lists:keyfind(forward_number, 1, Target),
-    FNumber_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
-                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
-                    FNumber),
+    %~ FNumber_enc = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    %~ ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    %~ FNumber),
     %~ error_logger:tty(false),
     % start link server and create linkset
     {ok, SS7linksPid} = ss7_links:start_link(),
@@ -96,7 +96,7 @@ connect(Configfile) ->
     wait_for_link(Link),
     #loop_dat{m3ua_pid = M3uaPid, scrc_pid = ScrcPid, ss7links_pid = SS7linksPid, ss7routes_pid = SS7routesPid, link = Link,
                 local_pc = Local_PC, remote_pc = Remote_PC, gt_local = GT_Local, gt_hlr = GT_Hlr, gt_vlr = GT_Vlr, gt_msc = GT_Msc, 
-                gt_sgsn = GT_Sgsn, gt_gmsc = GT_Gmsc, gt_smsc = GT_Smsc, msisdn = Msisdn_enc, imsi = hex:hexstr_to_bin(Imsi), scenter = SCenter_enc, fnumber = FNumber_enc}.
+                gt_sgsn = GT_Sgsn, gt_gmsc = GT_Gmsc, gt_smsc = GT_Smsc, msisdn = Msisdn, imsi = Imsi, scenter = SCenter, fnumber = FNumber}.
 
 wait_for_link(Link) ->
     case ss7_link_m3ua:get_link_state(Link) of

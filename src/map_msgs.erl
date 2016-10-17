@@ -111,8 +111,10 @@ create_mt_forwardSM_v2() ->
     create_mt_forwardSM_v2(create_testSMSPDU_mt(), ?IMSI, ?SERVICE_CENTER_ADDRESS_DA).
 create_mt_forwardSM_v2(SMSPDU, Imsi, Scada) ->
     MapData = { 'ForwardSM-Arg',
-                {imsi, Imsi},
-                {serviceCentreAddressOA, Scada},
+                {imsi, ss7_helper:encode_imsi(Imsi)},
+                {serviceCentreAddressOA, ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Scada)},
                 SMSPDU,
                 asn1_NOVALUE, asn1_NOVALUE},
     Dialog = build_dialog_request({0,4,0,0,1,0,25,2}),
@@ -123,7 +125,9 @@ create_mt_forwardSM() ->
 create_mt_forwardSM(SMSPDU) ->
     MapData = {'MT-ForwardSM-Arg',
                {serviceCentreAddressDA, ?SERVICE_CENTER_ADDRESS_DA},
-               {msisdn, ?SOURCE_ADDRESS},
+               {msisdn, ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    ?SOURCE_ADDRESS)},
                SMSPDU,
                asn1_NOVALUE,    %moreMessagesToSend
                asn1_NOVALUE     %extensionContainer
@@ -135,8 +139,12 @@ create_mo_forwardSM_v2() ->
     create_mo_forwardSM_v2(create_testSMSPDU_mo(), ?SERVICE_CENTER_ADDRESS_DA, ?MSISDN).
 create_mo_forwardSM_v2(SMSPDU, Scada, Msisdn) ->
     MapData = { 'ForwardSM-Arg',
-                {serviceCentreAddressDA, Scada},
-                {msisdn, Msisdn},
+                {serviceCentreAddressDA, ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Scada)},
+                {msisdn, ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Msisdn)},
                 SMSPDU,
                 asn1_NOVALUE, asn1_NOVALUE},
     Dialog = build_dialog_request({0,4,0,0,1,0,21,2}),
@@ -147,7 +155,9 @@ create_mo_forwardSM() ->
 create_mo_forwardSM(SMSPDU) ->
     MapData = {'MO-ForwardSM-Arg',
                  {serviceCentreAddressDA, ?SERVICE_CENTER_ADDRESS_DA},
-                 {msisdn, ?MSISDN},
+                 {msisdn, ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    ?MSISDN)},
                  SMSPDU,
                  asn1_NOVALUE,
                  asn1_NOVALUE  % ?IMSI_FROM
@@ -162,9 +172,13 @@ create_sendRoutingInfoForSM() ->
     create_sendRoutingInfoForSM(?MSISDN, ?SERVICE_CENTER_ADDRESS).
 create_sendRoutingInfoForSM(Msisdn, Ssaddr) ->
     MapData = { 'send-routing-info-for-sm-arg',
-                Msisdn,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Msisdn),
                 false,
-                Ssaddr,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Ssaddr),
                 asn1_NOVALUE,
                 asn1_NOVALUE, %true,
                 asn1_NOVALUE, %0,
@@ -192,7 +206,9 @@ create_sendRoutingInfo() ->
     create_sendRoutingInfo(?MSISDN, ?LOCAL_GLOBAL_TITLE).
 create_sendRoutingInfo(Msisdn, OrGsmSCF) ->
     MapData = {'SendRoutingInfoArg',
-                Msisdn,
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Msisdn),
                 asn1_NOVALUE,
                 asn1_NOVALUE,
                 basicCall,
@@ -273,7 +289,9 @@ create_registerSS(Imsi, Origin, DestinationNumber) ->
     MapData = {'RegisterSS-Arg',
                 ?allForwardingSS,    %ss-Code
                 asn1_NOVALUE,
-                DestinationNumber,   %forwardedToNumber
+                ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    DestinationNumber),   %forwardedToNumber
                 asn1_NOVALUE,
                 asn1_NOVALUE,
                 asn1_NOVALUE,
@@ -346,7 +364,7 @@ create_updateLocation() ->
     create_updateLocation(?IMSI, ?LOCAL_GLOBAL_TITLE, ?LOCAL_GLOBAL_TITLE).
 create_updateLocation(Imsi, MscNr, VlrNr) ->
     MapData = {'UpdateLocationArg',
-                Imsi,
+                ss7_helper:encode_imsi(Imsi),
                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         MscNr),     %msc-Number
@@ -383,11 +401,11 @@ create_updateLocation(Imsi, MscNr, VlrNr) ->
     {ok, EncMapPDU} = map:encode('MapSpecificPDUs', MapPDU),
     EncMapPDU.
     
-create_anyTimeInerrogation() ->
-    create_anyTimeInerrogation(?IMSI, ?LOCAL_GLOBAL_TITLE).
-create_anyTimeInerrogation(Imsi, GsmSCF) ->
+create_anyTimeInterrogation() ->
+    create_anyTimeInterrogation(?IMSI, ?LOCAL_GLOBAL_TITLE).
+create_anyTimeInterrogation(Imsi, GsmSCF) ->
     MapData = {'AnyTimeInterrogationArg',
-                 {imsi, Imsi}, %{msisdn,?MSISDN},
+                 {imsi, ss7_helper:encode_imsi(Imsi)}, %{msisdn,?MSISDN},
                  {'RequestedInfoMAP-MS-DataTypes',asn1_NOVALUE,
                      'NULL',asn1_NOVALUE,asn1_NOVALUE,
                      asn1_NOVALUE,asn1_NOVALUE,asn1_NOVALUE,
@@ -405,7 +423,7 @@ create_sendAuthenticationInfo(Imsi) ->
     create_sendAuthenticationInfo(Imsi, 5).
 create_sendAuthenticationInfo(Imsi, Nr) ->
     MapData = { 'SendAuthenticationInfoArg',
-                Imsi,
+                ss7_helper:encode_imsi(Imsi),
                 Nr,
                 asn1_NOVALUE,
                 asn1_NOVALUE,
@@ -435,7 +453,9 @@ create_sendAuthenticationInfo(Imsi, Nr) ->
 create_sendImsi() ->
     create_sendImsi(?MSISDN).
 create_sendImsi(Msisdn) ->
-    MapData = Msisdn,
+    MapData = ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Msisdn),
     Dialog = build_dialog_request(?'imsiRetrievalContext-v2'),
     encode_map_pdu(Dialog, 58, MapData).
 
@@ -443,7 +463,7 @@ create_purgeMs() ->
     create_purgeMs(?IMSI, ?LOCAL_GLOBAL_TITLE).
 create_purgeMs(Imsi, VlrNr) ->
     MapData = {'PurgeMs-Arg',
-                Imsi,
+                ss7_helper:encode_imsi(Imsi),
                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                         ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                         VlrNr),   %VLR number
@@ -451,6 +471,36 @@ create_purgeMs(Imsi, VlrNr) ->
                 asn1_NOVALUE},  %Last Known Location
     Dialog = build_dialog_request(?'msPurgingContext-v3'),
     encode_map_pdu(Dialog, 67, MapData).
+
+% gsm_map and tcap.localValue == 59
+create_processUnstructuredSS() ->
+    create_processUnstructuredSS(?IMSI, ?MSISDN, "*100#").
+create_processUnstructuredSS(Imsi, Msisdn, UssdString) ->
+    MapDialoguePDU = {'map-open',
+                    {'MAP-OpenInfo',
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                            ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_LAND_MOBILE,
+                            Imsi),    %destinationReference
+                        ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                            ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                            Msisdn),   %originationReference
+                        asn1_NOVALUE }},
+    {ok, EncMapDialoguePDU} = map:encode('MAP-DialoguePDU', MapDialoguePDU),
+    DialoguePDU = {'dialogueRequest',
+                    {'AARQ-apdu',
+                        [version1],
+                        ?'networkUnstructuredSsContext-v2',
+                        [{'EXTERNAL',
+                            ?'map-DialogueAS',
+                            asn1_NOVALUE,asn1_NOVALUE,
+                            {'single-ASN1-type',
+                                EncMapDialoguePDU}}]}},
+    {ok, EncDialoguePDU} = map:encode('DialoguePDU', DialoguePDU),
+    MapData = {'USSD-Arg',
+                <<15>>,     %ussd-DataCodingScheme; 0x0f = 15 == Coding Group 0 [gsm 7bit]; Language unspecified
+                'sms_7bit_encoding':to_7bit(UssdString), %<<170,152,12,54,2>>,    %ussd-String
+                asn1_NOVALUE,asn1_NOVALUE},
+    encode_map_pdu(EncDialoguePDU, 59, MapData).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % to MSC/VLR
@@ -460,7 +510,7 @@ create_provideSubscriberInfo() ->
     create_provideSubscriberInfo(?IMSI).
 create_provideSubscriberInfo(Imsi) ->
     MapData = {'ProvideSubscriberInfoArg',
-         Imsi,
+         ss7_helper:encode_imsi(Imsi),
          asn1_NOVALUE,
          {'RequestedInfoMAP-MS-DataTypes',
             'NULL',         %locationInformation
@@ -479,9 +529,46 @@ create_provideSubscriberInfo(Imsi) ->
     Dialog = build_dialog_request(?'subscriberInfoEnquiryContext-v3'),
     encode_map_pdu(Dialog, 70, MapData).
 
+create_provideSubscriberLocation() ->
+    create_provideSubscriberLocation(?IMSI).
+create_provideSubscriberLocation(Imsi) ->
+    MapData = {'ProvideSubscriberLocationArg'
+          %~ locationType            LocationType,
+          %~ mlc-Number              ISDN-AddressString,
+          %~ lcs-ClientID            [0]  LCS-ClientID OPTIONAL,
+          %~ privacyOverride         [1]  NULL OPTIONAL,
+          %~ imsi                    [2]  IMSI OPTIONAL,
+          %~ msisdn                  [3]  ISDN-AddressString OPTIONAL,
+          %~ lmsi                    [4]  LMSI OPTIONAL,
+          %~ imei                    [5]  IMEI OPTIONAL,
+          %~ lcs-Priority            [6]  LCS-Priority OPTIONAL,
+          %~ lcs-QoS                 [7]  LCS-QoS OPTIONAL,
+          %~ extensionContainer      [8]  ExtensionContainer OPTIONAL,
+          %~ ...,
+          %~ supportedGADShapes      [9]  SupportedGADShapes OPTIONAL,
+          %~ lcs-ReferenceNumber     [10]  LCS-ReferenceNumber OPTIONAL,
+          %~ lcsServiceTypeID        [11]  LCSServiceTypeID OPTIONAL,
+          %~ lcsCodeword             [12]  LCSCodeword OPTIONAL
+        %~ -- one of imsi or msisdn is mandatory 
+        %~ -- If a location estimate type indicates activate deferred location or cancel deferred 
+        %~ -- location, a lcs-Reference number shall be included. 
+        %~ LocationType ::= SEQUENCE {
+          %~ locationEstimateType          [0]  LocationEstimateType,
+          %~ ...,
+          %~ deferredLocationEventType     [1]  DeferredLocationEventType OPTIONAL}
+
+        %~ LocationEstimateType ::= ENUMERATED {
+          %~ currentLocation(0), currentOrLastKnownLocation(1), initialLocation(2), ..., 
+          %~ activateDeferredLocation(3), cancelDeferredLocation(4)}
+          },
+    Dialog = build_dialog_request(?'locationInfoRetrievalContext-v3'),
+    encode_map_pdu(Dialog, 83, MapData).
+
 create_sendIdentification() ->
+    create_sendIdentification(?TMSI).
+create_sendIdentification(Tmsi) ->
     MapData = { 'SendIdentificationArg',
-            ?TMSI,
+            Tmsi,
             5,              %NumberOfRequestedVectors
             asn1_NOVALUE,   %segmentationProhibited
             asn1_NOVALUE,   %ExtensionContainer
@@ -496,11 +583,13 @@ create_provideRoamingNumber() ->
     create_provideRoamingNumber(?IMSI, ?MSISDN, ?LOCAL_GLOBAL_TITLE, ?LOCAL_GLOBAL_TITLE).
 create_provideRoamingNumber(Imsi, Msisdn, MscNr, GmscNr) ->
     MapData = {'ProvideRoamingNumberArg',
-                 Imsi,
+                 ss7_helper:encode_imsi(Imsi),
                  ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
                             ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
                             MscNr),         %msc-Number
-                 Msisdn,
+                 ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                    ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                    Msisdn),
                  asn1_NOVALUE,
                  {'ExternalSignalInfo','gsm-0408',
                      <<4,1,160>>,
@@ -523,7 +612,7 @@ create_cancelLocation() ->
     create_cancelLocation(?IMSI).
 create_cancelLocation(Imsi) ->
     MapData = {'CancelLocationArg',
-                 {imsi,Imsi},
+                 {imsi, ss7_helper:encode_imsi(Imsi)},
                  updateProcedure,
                  asn1_NOVALUE,
                  asn1_NOVALUE},

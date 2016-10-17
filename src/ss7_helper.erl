@@ -1,10 +1,13 @@
 -module(ss7_helper).
 -author('Daniel Mende <mail@c0decafe.de>').
 
+-include("ss7MAPer.hrl").
+
 -export([encode_phonenumber/4, 
          decode_phonenumber/1,
          encode_msisdn/4,
          decode_imsi/1,
+         encode_imsi/1,
          remove_firstN/2,
          tup2bin/1]).
 
@@ -17,6 +20,14 @@ decode_imsi(Imsi) ->
       First==15 -> lists:append([Second], Dec);
       true ->       lists:append([Second,First], Dec)
     end.
+
+encode_imsi([]) ->
+    <<>>;
+encode_imsi([Last]) ->
+    <<15:4, Last:4>>;
+encode_imsi([First,Second|Tail]) ->
+    EncImsi = encode_imsi(Tail),
+    <<Second:4, First:4, EncImsi/binary>>.
 
 %% ===================================================================
 %% Phone Number helper

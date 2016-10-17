@@ -25,6 +25,7 @@ test_hlr(L) ->
     test_ul(Gts, L2),
     test_ati(Gts, L2),
     test_pms(Gts, L2),
+    test_pus(Gts, L2),
     ok = sccp_user:unbind_ssn(LocalSsn, undefined),
     L2.
 
@@ -123,8 +124,9 @@ test_si(Gts, L) ->
                           {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult_result',
                             {local,58},
                               Imsi }}}}|_] ->
-                    io:format("\e[91;1mReceived IMSI ~w~n\e[39;49;0m", [ss7_helper:decode_imsi(Imsi)]),
-                    L#loop_dat{imsi = Imsi}
+                    ImsiDec = ss7_helper:decode_imsi(Imsi),
+                    io:format("\e[91;1mReceived IMSI ~w~n\e[39;49;0m", [ImsiDec]),
+                    L#loop_dat{imsi = ImsiDec}
                 end;
               _->
                 io:format("\e[91;1mError decoding sendImsi\n\e[39;49;0m"),
@@ -193,7 +195,7 @@ test_rss(Gts, L) ->
     %~ registerSS
     %~ ========
     io:format("~n\e[93;1m# Testing registerSS...\n\e[39;49;0m"),
-    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_registerSS(ss7_helper:decode_imsi(L#loop_dat.imsi), L#loop_dat.gt_vlr, L#loop_dat.fnumber)),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_registerSS(L#loop_dat.imsi, L#loop_dat.gt_vlr, L#loop_dat.fnumber)),
     receive
         {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
             case tcap:decode_tcap(Data) of
@@ -226,7 +228,7 @@ test_ess(Gts, L) ->
     %~ eraseSS
     %~ ========
     io:format("~n\e[93;1m# Testing eraseSS...\n\e[39;49;0m"),
-    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_eraseSS(ss7_helper:decode_imsi(L#loop_dat.imsi), L#loop_dat.gt_vlr)),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_eraseSS(L#loop_dat.imsi, L#loop_dat.gt_vlr)),
     receive
         {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
             case tcap:decode_tcap(Data) of
@@ -288,12 +290,12 @@ test_ati(Gts, L) ->
     %~ anyTimeInterrogation
     %~ ========
     io:format("~n\e[93;1m# Testing anyTimeInterrogation...\n\e[39;49;0m"),
-    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_anyTimeInerrogation(L#loop_dat.imsi, L#loop_dat.gt_local)),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_anyTimeInterrogation(L#loop_dat.imsi, L#loop_dat.gt_local)),
     receive
         {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
             case tcap:decode_tcap(Data) of
                 {ok, Results} ->
-                    io:format("\e[97;1mGot answer for anyTimeInerrogation\n~w\n\e[39;49;0m", [Results]),
+                    io:format("\e[97;1mGot answer for anyTimeInterrogation\n~w\n\e[39;49;0m", [Results]),
                 case Results of
                   [{basicROS, {returnError, {_, {present, Present}, {local, Local}, _}}}] ->
                     case {Present, Local} of
@@ -306,12 +308,12 @@ test_ati(Gts, L) ->
                     io:format("\e[93;1mNo Error.~n\e[39;49;0m")
                 end;
               _->
-                io:format("\e[91;1mError decoding anyTimeInerrogation\n\e[39;49;0m")
+                io:format("\e[91;1mError decoding anyTimeInterrogation\n\e[39;49;0m")
             end;
         _->
-            io:format("\e[91;1mError no data received for anyTimeInerrogation\n\e[39;49;0m")
+            io:format("\e[91;1mError no data received for anyTimeInterrogation\n\e[39;49;0m")
     after 2000 ->
-        io:format("\e[91;1mError timeout on receiving anyTimeInerrogation\n\e[39;49;0m")
+        io:format("\e[91;1mError timeout on receiving anyTimeInterrogation\n\e[39;49;0m")
     end,
     L.
 
@@ -348,6 +350,41 @@ test_pms(Gts, L) ->
     end,
     L.
 
+test_pus(Gts, L) ->
+    %~ ========
+    %~ processUnstructuredSS
+    %~ ========
+    io:format("~n\e[93;1m# Testing processUnstructuredSS...\n\e[39;49;0m"),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_processUnstructuredSS(L#loop_dat.imsi, L#loop_dat.msisdn, "*100#")),
+    receive
+        {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
+            case tcap:decode_tcap(Data) of
+                {ok, Results} ->
+                    io:format("\e[97;1mGot answer for processUnstructuredSS\n~w\n\e[39;49;0m", [Results]),
+                case Results of
+                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, _}}}] ->
+                    io:format("\e[91;1mReceived Error: Present ~w, Local ~w~n\e[39;49;0m", [Present, Local]);
+                  [{basicROS,
+                 {returnResult,
+                     {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult',
+                         {present,0},
+                         {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult_result',
+                             {local,59},
+                             {'USSD-Res', _, ResString}}}}}|_] ->
+                    io:format("\e[91;1mReceived processUnstructuredSS-Res '~p', processUnstructuredSS is working~n\e[39;49;0m", ['sms_7bit_encoding':from_7bit(ResString)]);
+                  _ ->
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
+                end;
+              _->
+                io:format("\e[91;1mError decoding processUnstructuredSS\n\e[39;49;0m")
+            end;
+        _->
+            io:format("\e[91;1mError no data received for processUnstructuredSS\n\e[39;49;0m")
+    after 2000 ->
+        io:format("\e[91;1mError timeout on receiving processUnstructuredSS\n\e[39;49;0m")
+    end,
+    L.
+
 %~ =========
 %~ MSC TESTS
 %~ =========
@@ -360,6 +397,7 @@ test_msc(L) ->
     test_cl(Gts, L),
     ok = sccp_user:unbind_ssn(?SCCP_SSN_HLR, undefined),
     ok = sccp_user:bind_ssn(?SCCP_SSN_MSC),
+    test_sid(Gts, L),
     test_mt_fsm(Gts, L),
     ok = sccp_user:unbind_ssn(?SCCP_SSN_MSC, undefined),
     L.
@@ -460,6 +498,39 @@ test_cl(Gts, L) ->
             io:format("\e[91;1mError no data received for cancelLocation\n\e[39;49;0m")
     after 2000 ->
         io:format("\e[91;1mError timeout on receiving cancelLocation\n\e[39;49;0m")
+    end,
+    L.
+
+test_sid(Gts, L) ->
+    %~ ========
+    %~ sendIdentification
+    %~ ========
+    io:format("~n\e[93;1m# Testing sendIdentification...\n\e[39;49;0m"),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_HLR, ?SCCP_SSN_SGSN}, map_msgs:create_sendIdentification()), %L#loop_dat.tmsi
+    receive
+        {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
+            case tcap:decode_tcap(Data) of
+              {ok, Results} ->
+                io:format("\e[97;1mGot answer for sendIdentification~n~w~n\e[39;49;0m", [Results]),
+                case Results of
+                  [{basicROS, {returnError, {_, {present, Present}, {local, Local}, _}}}] ->
+                    io:format("\e[91;1mReceived Error: Present ~w, Local ~w~n\e[39;49;0m", [Present, Local]);
+                  %~ [{basicROS,
+                    %~ {returnResult,
+                      %~ {'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult',
+                        %~ {present,1},{'MapSpecificPDUs_end_components_SEQOF_basicROS_returnResult_result',
+                          %~ {local,70},_}}}}|_] ->
+                    %~ io:format("\e[91;1mReceived cancelLocationRes~n\e[39;49;0m");
+                  _ ->
+                    io:format("\e[93;1mNo Error.~n\e[39;49;0m")
+                end;
+              _->
+                io:format("\e[91;1mError decoding sendIdentification\n\e[39;49;0m")
+            end;
+        _->
+            io:format("\e[91;1mError no data received for sendIdentification\n\e[39;49;0m")
+    after 2000 ->
+        io:format("\e[91;1mError timeout on receiving sendIdentification\n\e[39;49;0m")
     end,
     L.
 
