@@ -12,7 +12,7 @@ If you use the binary version, skip right over the next chapter.
 
 You will need:
 
- * Erlang. Get it from your repo or from http://www.erlang.org. ~~Currently only building with Erlang <= 17.5 due to a bug in the Erlang ASN.1 compiler.~~ Fixed.
+ * Erlang. Get it from your repo or from http://www.erlang.org.
 
  * Rebar. Get it from your repo or from https://github.com/rebar/rebar
 
