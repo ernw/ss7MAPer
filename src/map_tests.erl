@@ -11,8 +11,7 @@
 %~ =========
 
 test_hlr(L) ->
-    LocalSsn = ?SCCP_SSN_MSC,
-    ok = sccp_user:bind_ssn(LocalSsn),
+    ok = sccp_user:bind_ssn(?SCCP_SSN_MSC),
     Gts = {L#loop_dat.gt_local, L#loop_dat.gt_hlr},
     test_sri(Gts, L),
     test_srifs(Gts, L),
@@ -25,8 +24,10 @@ test_hlr(L) ->
     test_ul(Gts, L2),
     test_ati(Gts, L2),
     test_pms(Gts, L2),
+    ok = sccp_user:unbind_ssn(?SCCP_SSN_MSC, undefined),
+    ok = sccp_user:bind_ssn(?SCCP_SSN_VLR),
     test_pus(Gts, L2),
-    ok = sccp_user:unbind_ssn(LocalSsn, undefined),
+    ok = sccp_user:unbind_ssn(?SCCP_SSN_VLR, undefined),
     L2.
 
 test_sri(Gts, L) ->
@@ -355,7 +356,7 @@ test_pus(Gts, L) ->
     %~ processUnstructuredSS
     %~ ========
     io:format("~n\e[93;1m# Testing processUnstructuredSS...\n\e[39;49;0m"),
-    tcap:send_tcap(L, Gts, {?SCCP_SSN_MSC, ?SCCP_SSN_HLR}, map_msgs:create_processUnstructuredSS(L#loop_dat.imsi, L#loop_dat.msisdn, "*100#")),
+    tcap:send_tcap(L, Gts, {?SCCP_SSN_VLR, ?SCCP_SSN_HLR}, map_msgs:create_processUnstructuredSS(L#loop_dat.imsi, L#loop_dat.msisdn, "*100#")),
     receive
         {sccp, {primitive, 'N', 'UNITDATA', indication, Data}} ->
             case tcap:decode_tcap(Data) of

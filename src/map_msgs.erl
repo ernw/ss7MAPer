@@ -502,6 +502,25 @@ create_processUnstructuredSS(Imsi, Msisdn, UssdString) ->
                 asn1_NOVALUE,asn1_NOVALUE},
     encode_map_pdu(EncDialoguePDU, 59, MapData).
 
+% gsm_map and tcap.localValue == 65
+create_anyTimeModification() ->
+    create_anyTimeModification(?IMSI, ?LOCAL_GLOBAL_TITLE).
+create_anyTimeModification(Imsi, GsmSCF) ->
+    MapData = {'AnyTimeModificationArg',
+          {imsi, ss7_helper:encode_imsi(Imsi)},  %~ subscriberIdentity                  [0]  SubscriberIdentity,
+          ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                        GsmSCF),                 %~ gsmSCF-Address                      [1]  ISDN-AddressString,
+          asn1_NOVALUE,                          %~ modificationRequestFor-CF-Info      [2]  ModificationRequestFor-CF-Info OPTIONAL,
+          asn1_NOVALUE,                          %~ modificationRequestFor-CB-Info      [3]  ModificationRequestFor-CB-Info OPTIONAL,
+          asn1_NOVALUE,                          %~ modificationRequestFor-CSI          [4]  ModificationRequestFor-CSI OPTIONAL,
+          asn1_NOVALUE,                          %~ extensionContainer                  [5]  ExtensionContainer OPTIONAL,
+          asn1_NOVALUE,                          %~ longFTN-Supported                   [6]  NULL OPTIONAL,
+          asn1_NOVALUE                           %~ modificationRequestFor-ODB-data     [7]  ModificationRequestFor-ODB-data OPTIONAL
+            },
+    Dialog = build_dialog_request(?'anyTimeInfoHandlingContext-v3'),
+    encode_map_pdu(Dialog, 65, MapData).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % to MSC/VLR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -530,36 +549,26 @@ create_provideSubscriberInfo(Imsi) ->
     encode_map_pdu(Dialog, 70, MapData).
 
 create_provideSubscriberLocation() ->
-    create_provideSubscriberLocation(?IMSI).
-create_provideSubscriberLocation(Imsi) ->
-    MapData = {'ProvideSubscriberLocationArg'
-          %~ locationType            LocationType,
-          %~ mlc-Number              ISDN-AddressString,
-          %~ lcs-ClientID            [0]  LCS-ClientID OPTIONAL,
-          %~ privacyOverride         [1]  NULL OPTIONAL,
-          %~ imsi                    [2]  IMSI OPTIONAL,
-          %~ msisdn                  [3]  ISDN-AddressString OPTIONAL,
-          %~ lmsi                    [4]  LMSI OPTIONAL,
-          %~ imei                    [5]  IMEI OPTIONAL,
-          %~ lcs-Priority            [6]  LCS-Priority OPTIONAL,
-          %~ lcs-QoS                 [7]  LCS-QoS OPTIONAL,
-          %~ extensionContainer      [8]  ExtensionContainer OPTIONAL,
-          %~ ...,
-          %~ supportedGADShapes      [9]  SupportedGADShapes OPTIONAL,
-          %~ lcs-ReferenceNumber     [10]  LCS-ReferenceNumber OPTIONAL,
-          %~ lcsServiceTypeID        [11]  LCSServiceTypeID OPTIONAL,
-          %~ lcsCodeword             [12]  LCSCodeword OPTIONAL
-        %~ -- one of imsi or msisdn is mandatory 
-        %~ -- If a location estimate type indicates activate deferred location or cancel deferred 
-        %~ -- location, a lcs-Reference number shall be included. 
-        %~ LocationType ::= SEQUENCE {
-          %~ locationEstimateType          [0]  LocationEstimateType,
-          %~ ...,
-          %~ deferredLocationEventType     [1]  DeferredLocationEventType OPTIONAL}
-
-        %~ LocationEstimateType ::= ENUMERATED {
-          %~ currentLocation(0), currentOrLastKnownLocation(1), initialLocation(2), ..., 
-          %~ activateDeferredLocation(3), cancelDeferredLocation(4)}
+    create_provideSubscriberLocation(?IMSI, ?LOCAL_GLOBAL_TITLE).
+create_provideSubscriberLocation(Imsi, Mlc) ->
+    MapData = {'ProvideSubscriberLocationArg',
+          {currentOrLastKnownLocation, asn1_NOVALUE},            %~ locationType            LocationType,
+          ss7_helper:encode_msisdn(?NUMBER_EXTENSION_NONE,
+                        ?NUMBER_NATURE_INTERNATIONAL, ?NUMBER_PLAN_ISDN,
+                        Mlc),                                    %~ mlc-Number              ISDN-AddressString,
+          asn1_NOVALUE,                                          %~ lcs-ClientID            [0]  LCS-ClientID OPTIONAL,
+          asn1_NOVALUE,                                          %~ privacyOverride         [1]  NULL OPTIONAL,
+          ss7_helper:encode_imsi(Imsi),                          %~ imsi                    [2]  IMSI OPTIONAL,
+          asn1_NOVALUE,                                          %~ msisdn                  [3]  ISDN-AddressString OPTIONAL,
+          asn1_NOVALUE,                                          %~ lmsi                    [4]  LMSI OPTIONAL,
+          asn1_NOVALUE,                                          %~ imei                    [5]  IMEI OPTIONAL,
+          asn1_NOVALUE,                                          %~ lcs-Priority            [6]  LCS-Priority OPTIONAL,
+          asn1_NOVALUE,                                          %~ lcs-QoS                 [7]  LCS-QoS OPTIONAL,
+          asn1_NOVALUE,                                          %~ extensionContainer      [8]  ExtensionContainer OPTIONAL,
+          asn1_NOVALUE,                                          %~ supportedGADShapes      [9]  SupportedGADShapes OPTIONAL,
+          asn1_NOVALUE,                                          %~ lcs-ReferenceNumber     [10]  LCS-ReferenceNumber OPTIONAL,
+          asn1_NOVALUE,                                          %~ lcsServiceTypeID        [11]  LCSServiceTypeID OPTIONAL,
+          asn1_NOVALUE                                           %~ lcsCodeword             [12]  LCSCodeword OPTIONAL
           },
     Dialog = build_dialog_request(?'locationInfoRetrievalContext-v3'),
     encode_map_pdu(Dialog, 83, MapData).
