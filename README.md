@@ -6,6 +6,8 @@ SS7 MAP (pen-)testing toolkit
 
 As a lot of people run into problems building the tool, there are binary releases which can be found here: https://github.com/ernw/ss7MAPer/tree/master/releases
 
+As people also run into problems using the binary release, there is a [docker image](https://hub.docker.com/r/ernw/ss7maper/) with ss7MAPer running on ubuntu 16.04
+
 If you use the binary version, skip right over the next chapter.
 
 ## Get it running
