@@ -8,6 +8,7 @@
     {local_pc, 10},
     {remote_pc, 20},
     {network_ind, 2},
+    {link_select, 0},
     {route_ctx, 6},
     {asp_id, none},
     {net_appearance, none}
