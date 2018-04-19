@@ -47,4 +47,11 @@ rebar co
 cd rel/
 rebar create-node nodeid=ss7MAPer
 cd ..
+
+rm deps/signerl/TCAP/ebin/tcap_cco_server.beam
+rm deps/signerl/TCAP/ebin/tcap_ism_fsm.beam
+rm deps/signerl/TCAP/ebin/tcap_tco_server.beam
+rm deps/signerl/TCAP/ebin/tcap_tsm_fsm.beam
+rm deps/signerl/TCAP/ebin/tcap_dha_fsm.beam
+
 rebar generate
