@@ -79,7 +79,7 @@ connect(Configfile) ->
     {asp_id, Asp_ID} = lists:keyfind(asp_id, 1, M3UA_Config),
     {route_ctx, Route_CTX} = lists:keyfind(route_ctx, 1, M3UA_Config),
     {net_appearance, Net_Appearance} = lists:keyfind(net_appearance, 1, M3UA_Config),
-    {link_select, Link_Select} = lists:keyfind(link_select, 1, M3UA_Config).
+    {link_select, Link_Select} = lists:keyfind(link_select, 1, M3UA_Config),
     Link = #sigtran_link{type = m3ua, name = "test_link", linkset_name = "test_linkset",
                 sls = Link_Select, local = Local, remote = Remote, asp_id = Asp_ID,
                 route_ctx = Route_CTX, net_app = Net_Appearance},
